@@ -3,6 +3,8 @@ import type { Game } from '../app/controller'
 import type { ReviewGate, TradeStudyEvidence, WarningId } from '../app/contracts'
 import { configFields, fields, label, options, rationaleLabels } from '../app/options'
 import type { Save } from '../app/save'
+import { estimateResources, planningLimits } from '../app/planning'
+import { DesignComparison, MissionRehearsal, PlanningMargins } from './MissionPlanning'
 import { Orbit } from '../components/Orbit'
 import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
 
@@ -69,7 +71,8 @@ function WeatherPlanner({ config }: { config: Save['config'] }) {
 
 export function Builder({ game, save }: { game: Game; save: Save }) {
   const { config, alternative } = save
-  const resources = game.engine?.computeResources(config)
+  const resources = game.engine?.computeResources(config) ?? estimateResources(config)
+  const baselineResources = alternative && (game.engine?.computeResources(alternative) ?? estimateResources(alternative))
   const report = game.engine?.evaluateFeasibility(config)
   const changed = configFields.filter(field => alternative && config[field] !== alternative[field])
   const candidateStatus = !alternative ? 'Save this design as a baseline for the trade study.'
@@ -100,26 +103,28 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
             aria-label={name} aria-describedby={`builder-${id}`}/>
           <span><strong>{name}</strong><small id={`builder-${id}`}>{optionNotes[id]}</small></span>
         </label>)}</div>
-      </fieldset>)}</div>
+      </fieldset>)}<MissionRehearsal config={config}/></div>
       <aside className="builder-sidebar" aria-label="Design summary">
         <section className="panel builder-resources">
           <p className="eyebrow">Spacecraft / Resource envelope</p>
           <h2>Engineering limits</h2>
           <dl className="builder-caps">
-            <div><dt>Budget</dt><dd>{resources ? <>{number(resources.costBU)} <small>/ </small></> : null}120 <small>BU</small></dd></div>
-            <div><dt>Launch mass</dt><dd>{resources ? <>{number(resources.launchMassKg)} <small>/ </small></> : null}500 <small>kg</small></dd></div>
+            <div><dt>Budget</dt><dd>{number(resources.costBU)} <small>/ </small>{planningLimits.budget} <small>BU</small></dd></div>
+            <div><dt>Launch mass</dt><dd>{number(resources.launchMassKg)} <small>/ </small>{planningLimits.mass} <small>kg</small></dd></div>
           </dl>
+          <PlanningMargins resources={resources} config={config}/>
           {report ? <>
             <p className="tag" data-severity={report.eligible ? undefined : 'blocker'}>{report.eligible ? 'Engineering feasible' : 'Feasibility blockers'}</p>
             <Findings findings={[...report.blockers, ...report.warnings]}/>
-          </> : <p>Live resource totals and engineering review need the shared simulation engine. You can still configure and save a design.</p>}
-          {resources && <details><summary>All resource metrics</summary><ResourceMetrics report={resources}/></details>}
+          </> : <p>Resource totals are planning estimates. Engineering review and flight require the shared simulation engine.</p>}
+          <details><summary>All resource metrics</summary><ResourceMetrics report={resources}/></details>
         </section>
         <WeatherPlanner config={config}/>
         <section className="panel builder-study">
           <p className="eyebrow">Configuration / Design log</p>
           <h2>Trade study</h2>
           <p role="status">{candidateStatus}</p>
+          {baselineResources && <DesignComparison baseline={baselineResources} current={resources}/>}
           {alternative && <details><summary>Saved baseline</summary>
             <dl className="builder-baseline">{configFields.map(field => <div key={field}>
               <dt>{fields[field]}</dt><dd>{label(field, alternative[field])}{changed.includes(field) && <small> · Changed</small>}</dd>
