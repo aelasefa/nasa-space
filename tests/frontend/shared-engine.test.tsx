@@ -11,6 +11,8 @@ it.skipIf(!engine)('runs the judge demo with the real shared domain engine', () 
   const game = createGame(engine)
   render(<App game={game}/>)
   const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Your name' }), { target: { value: 'Commander' } })
+  click('Continue')
   click('Start mission')
   click('Save trade study candidate')
   for (const name of ['Ice-sensitive spectrometer', 'Solar + storage', 'High reserve', 'High-throughput antenna', 'Direct transfer']) {

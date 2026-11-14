@@ -8,6 +8,10 @@ import { fixture } from './engine.fixture'
 
 afterEach(() => { cleanup(); localStorage.clear() })
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+const enterBriefing = () => {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Your name' }), { target: { value: 'Commander' } })
+  click('Continue')
+}
 const phase = (game: ReturnType<typeof createGame>) => game.store.getState().save.phase
 
 function review(game: ReturnType<typeof createGame>) {
@@ -31,6 +35,7 @@ describe('LUNA-01 frontend', () => {
   it('renders a playable flow through all screens with the injected engine contract', () => {
     const game = createGame(fixture, localStorage)
     render(<App game={game}/>)
+    enterBriefing()
     click('Start mission')
     expect(screen.getByRole('heading', { name: 'Spacecraft builder' })).toBeTruthy()
     click('Save trade study candidate')
@@ -124,9 +129,22 @@ describe('LUNA-01 frontend', () => {
     expect(localStorage.getItem(saveKey)).toBe('{')
   })
 
+  it('updates scenario guidance when the player changes the relevant subsystem', () => {
+    render(<App game={createGame()}/>)
+    enterBriefing()
+    click('Start mission')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Scenario' }), { target: { value: 'shadow' } })
+    expect(screen.getByText(/Lightweight solar has less stored energy/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: 'Solar + storage' }))
+    expect(screen.getByText(/gives your spacecraft more energy/)).toBeTruthy()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Scenario' }), { target: { value: 'solar' } })
+    expect(screen.getByText(/basic antenna returns less data/)).toBeTruthy()
+  })
+
   it('allows draft editing while the shared engine is absent and keeps flight locked', () => {
     const game = createGame()
     render(<App game={game}/>)
+    enterBriefing()
     click('Start mission')
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Open engineering review' }).disabled).toBe(true)
     game.reviews()
