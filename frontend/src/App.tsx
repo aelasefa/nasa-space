@@ -4,7 +4,7 @@ import { useStore } from 'zustand'
 import type { Game } from './app/controller'
 import { Briefing } from './features/Briefing'
 import { Builder, Review } from './features/Design'
-import { Debrief, Flight, Playback } from './features/Flight'
+import { Debrief, Flight } from './features/Flight'
 import { Multiverse } from './features/Multiverse'
 import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
@@ -18,6 +18,8 @@ const phases = {
 export function App({ game }: { game: Game }) {
   const { save, recovery, message, playback } = useStore(game.store)
   const [confirmReset, setConfirmReset] = useState(false)
+  // The call sign lives in memory only; it is never written to the save.
+  const [callSign, setCallSign] = useState('')
   const [guide, setGuide] = useState(false)
   const closeGuide = useCallback(() => setGuide(false), [])
   const content = useRef<HTMLElement>(null)
@@ -54,7 +56,7 @@ export function App({ game }: { game: Game }) {
   }, [intro])
   const backdrop = <SpaceBackdrop mode={intro ? 'intro' : 'app'}/>
   if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
-    <Briefing start={game.start}/>
+    <Briefing start={name => { setCallSign(name); game.start() }}/>
   </main></>
   return <>{backdrop}<div className="shell" ref={shell}>
     <header className="topbar">
@@ -77,9 +79,8 @@ export function App({ game }: { game: Game }) {
         <button className="primary" onClick={game.reset}>Reset saved session</button></section> : <>
         {save.phase === 'builder' && <Builder game={game} save={save}/>}
         {save.phase === 'reviews' && <Review game={game} save={save}/>}
-        {save.phase === 'flight' && <Flight game={game} save={save}/>}
-        {save.phase === 'debrief' && root && (playback ? <Playback done={game.finishPlayback} result={root.result}/> :
-          <Debrief game={game} result={root.result}/>)}
+        {save.phase === 'flight' && <Flight game={game} save={save} callSign={callSign}/>}
+        {save.phase === 'debrief' && root && <Debrief game={game} universe={root} callSign={callSign}/>}
         {save.phase === 'multiverse' && save.collection && <Multiverse game={game} collection={save.collection}/>}
       </>}
     </main>

@@ -57,11 +57,11 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
     },
     trade(rationale: TradeStudyEvidence['rationale']) {
       const save = current()
-      if (!engine || save.phase !== 'reviews' || !save.alternative || !save.evidence) return
+      if (!engine || (save.phase !== 'reviews' && save.phase !== 'builder') || !save.alternative) return
       const a = engine.hashConfig(save.alternative)
       const b = engine.hashConfig(save.config)
       if (a === b) return
-      update({ evidence: { ...save.evidence, tradeStudy: {
+      update({ evidence: { ...(save.evidence ?? blankEvidence(b)), tradeStudy: {
         configHashA: a, configHashB: b, chosenConfigHash: b, rationale,
       } } })
     },
@@ -94,7 +94,7 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
         return
       }
       const root = engine.createRootUniverse(attempt, 'A', new Date().toISOString())
-      update({ phase: 'debrief', collection: { schemaVersion: 1, rootId: root.id, universes: [root] } }, true)
+      update({ phase: 'debrief', collection: { schemaVersion: 1, rootId: root.id, universes: [root] } })
     },
     finishPlayback() { store.setState({ playback: false }) },
     multiverse() {

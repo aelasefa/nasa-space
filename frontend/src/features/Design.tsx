@@ -8,6 +8,7 @@ import { DesignComparison, MissionRehearsal, PlanningMargins } from './MissionPl
 import { Orbit } from '../components/Orbit'
 import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
 import { Coach } from '../components/Coach'
+import { ShadowTradeoff } from './ShadowTradeoff'
 import { Term } from '../components/Term'
 
 const optionNotes: Record<(typeof options)[(typeof configFields)[number]][number][0], string> = {
@@ -86,7 +87,7 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
       <div className="builder-hero-copy">
         <p className="eyebrow"><span className="builder-signal" aria-hidden="true"/> LUNA–01 / Mission design</p>
         <h1>Spacecraft builder</h1>
-        <p className="lede">Build an orbiter to look for water ice. Pick one option in each category, then compare your design with a saved baseline.</p>
+        <p className="lede">Design an orbiter that can find the ice signature and get the evidence home. One decision matters most: power in the Moon’s shadow.</p>
         <dl className="builder-brief">
           <div><dt>Target</dt><dd>Lunar south pole</dd></div>
           <div><dt>Objective</dt><dd>Water ice survey</dd></div>
@@ -97,16 +98,9 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
         <figcaption><span>01 / Lunar approach</span><span>Orbit schematic</span></figcaption>
       </figure>
     </header>
-    <Coach title="Your design checklist" ready="Press “Open engineering review” to check your design." steps={[
-      { label: 'Pick the ice instrument', done: config.payloadId === 'ice_spectrometer',
-        hint: 'Under 01 Scientific payload, pick the Ice-sensitive spectrometer. It is the only instrument that can find water ice.' },
-      { label: 'Stay within limits', done: report ? report.eligible : true,
-        hint: 'Fix the red items under Engineering limits: cut cost or mass, or pick propulsion that covers your route.' },
-      { label: 'Save a baseline', done: Boolean(alternative),
-        hint: 'Press “Save trade study candidate” to keep a copy of this design to compare against.' },
-      { label: 'Change one part', done: changed.length > 0,
-        hint: 'Change at least one part, so you have two different designs to compare.' },
-    ]}/>
+    {game.engine ? <ShadowTradeoff game={game} save={save}/> :
+      <p className="panel">Engineering review and flight require the shared simulation engine.</p>}
+    <h2 className="builder-section-title">All parts and numbers</h2>
     <div className="builder-layout">
       <div className="builder-choices">{configFields.map((field, index) => <fieldset className="panel builder-group" key={field} aria-labelledby={`builder-${field}`}>
         <h2 id={`builder-${field}`}><span aria-hidden="true">0{index + 1}</span> {fields[field]}</h2>
@@ -115,7 +109,10 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
             aria-label={name} aria-describedby={`builder-${id}`}/>
           <span><strong>{name}</strong><small id={`builder-${id}`}>{optionNotes[id]}</small></span>
         </label>)}</div>
-      </fieldset>)}<MissionRehearsal config={config}/></div>
+      </fieldset>)}
+        <details className="panel builder-more"><summary>More planning tools: flight rehearsal and space weather</summary>
+          <MissionRehearsal config={config}/><WeatherPlanner config={config}/>
+        </details></div>
       <aside className="builder-sidebar" aria-label="Design summary">
         <section className="panel builder-resources">
           <p className="eyebrow">Spacecraft / Resource envelope</p>
@@ -131,7 +128,6 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
           </> : <p>Resource totals are planning estimates. Engineering review and flight require the shared simulation engine.</p>}
           <details><summary>All resource metrics</summary><ResourceMetrics report={resources}/></details>
         </section>
-        <WeatherPlanner config={config}/>
         <section className="panel builder-study">
           <p className="eyebrow">Configuration / Design log</p>
           <h2>Trade study</h2>
@@ -143,10 +139,10 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
               <dt>{fields[field]}</dt><dd>{label(field, alternative[field])}{changed.includes(field) && <small> · Changed</small>}</dd>
             </div>)}</dl>
           </details>}
-          <div className="builder-actions">
+          {!game.engine && <div className="builder-actions">
             <button className="quiet" onClick={game.saveAlternative}>{alternative ? 'Replace baseline with current design' : 'Save trade study candidate'}</button>
-            <button className="primary" onClick={game.reviews} disabled={!game.engine}>Open engineering review</button>
-          </div>
+            <button className="primary" onClick={game.reviews} disabled>Open engineering review</button>
+          </div>}
         </section>
       </aside>
     </div>

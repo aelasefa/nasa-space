@@ -1,4 +1,5 @@
 import { Term } from './Term'
+import { plain, statusLabel } from '../app/story'
 import type { TermId } from '../app/glossary'
 import type { CausalFinding, Finding, ResolvedEvent, ResourceReport } from '../app/contracts'
 
@@ -17,7 +18,7 @@ const metricTerms: Record<keyof ResourceReport, TermId> = {
 export const number = (value: number) => new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(value)
 export const delta = (value: number) => (value > 0 ? '+' : '') + number(value)
 export const readable = (text: string) => text.replaceAll('_', ' ')
-export const eventNames = { arrival: 'Lunar arrival', E1: 'Observation window', E2: 'Science downlink' }
+export const eventNames = { arrival: 'Lunar arrival', E1: 'Shadow pass', E2: 'Science downlink' }
 export const outcomes = { success: 'Success', partial: 'Partial success', failure: 'Failure' }
 
 export function ResourceMetrics({ report }: { report: ResourceReport }) {
@@ -33,14 +34,14 @@ export function Findings({ findings }: { findings: Finding[] }) {
 
 export function Timeline({ events }: { events: ResolvedEvent[] }) {
   return <ol className="timeline">{events.map(event => <li key={event.id}>
-    <strong>{eventNames[event.id]}</strong> <span className="tag">{readable(event.status)}</span>
-    <p>{event.description}</p>
+    <strong>{eventNames[event.id]}</strong> <span className="tag">{statusLabel(event.status)}</span>
+    <p>{plain(event.description)}</p>
   </li>)}</ol>
 }
 
 export function Causes({ causes }: { causes: CausalFinding[] }) {
   return causes.length ? <ul className="causes">{causes.map(cause => <li key={cause.id}>
     <small>{eventNames[cause.eventId as keyof typeof eventNames] ?? readable(cause.eventId)} · {readable(cause.constraintId)}</small>
-    <p>{cause.effect}</p>
+    <p>{plain(cause.effect)}</p>
   </li>)}</ul> : <p>No causal findings were reported by the model.</p>
 }
