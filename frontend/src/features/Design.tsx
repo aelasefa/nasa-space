@@ -7,6 +7,8 @@ import { estimateResources, planningLimits } from '../app/planning'
 import { DesignComparison, MissionRehearsal, PlanningMargins } from './MissionPlanning'
 import { Orbit } from '../components/Orbit'
 import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
+import { Coach } from '../components/Coach'
+import { Term } from '../components/Term'
 
 const optionNotes: Record<(typeof options)[(typeof configFields)[number]][number][0], string> = {
   mapping_camera: 'Maps the terrain, but cannot meet the ice science objective.',
@@ -95,6 +97,16 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
         <figcaption><span>01 / Lunar approach</span><span>Orbit schematic</span></figcaption>
       </figure>
     </header>
+    <Coach title="Your design checklist" ready="Press “Open engineering review” to check your design." steps={[
+      { label: 'Pick the ice instrument', done: config.payloadId === 'ice_spectrometer',
+        hint: 'Under 01 Scientific payload, pick the Ice-sensitive spectrometer. It is the only instrument that can find water ice.' },
+      { label: 'Stay within limits', done: report ? report.eligible : true,
+        hint: 'Fix the red items under Engineering limits: cut cost or mass, or pick propulsion that covers your route.' },
+      { label: 'Save a baseline', done: Boolean(alternative),
+        hint: 'Press “Save trade study candidate” to keep a copy of this design to compare against.' },
+      { label: 'Change one part', done: changed.length > 0,
+        hint: 'Change at least one part, so you have two different designs to compare.' },
+    ]}/>
     <div className="builder-layout">
       <div className="builder-choices">{configFields.map((field, index) => <fieldset className="panel builder-group" key={field} aria-labelledby={`builder-${field}`}>
         <h2 id={`builder-${field}`}><span aria-hidden="true">0{index + 1}</span> {fields[field]}</h2>
@@ -109,8 +121,8 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
           <p className="eyebrow">Spacecraft / Resource envelope</p>
           <h2>Engineering limits</h2>
           <dl className="builder-caps">
-            <div><dt>Budget</dt><dd>{number(resources.costBU)} <small>/ </small>{planningLimits.budget} <small>BU</small></dd></div>
-            <div><dt>Launch mass</dt><dd>{number(resources.launchMassKg)} <small>/ </small>{planningLimits.mass} <small>kg</small></dd></div>
+            <div><dt><Term id="bu">Budget</Term></dt><dd>{number(resources.costBU)} <small>/ </small>{planningLimits.budget} <small>BU</small></dd></div>
+            <div><dt><Term id="mass">Launch mass</Term></dt><dd>{number(resources.launchMassKg)} <small>/ </small>{planningLimits.mass} <small>kg</small></dd></div>
           </dl>
           <PlanningMargins resources={resources} config={config}/>
           {report ? <>
@@ -123,6 +135,7 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
         <section className="panel builder-study">
           <p className="eyebrow">Configuration / Design log</p>
           <h2>Trade study</h2>
+          <p className="fine">A <Term id="tradeStudy">trade study</Term> compares your current design with a saved <Term id="baseline">baseline</Term>.</p>
           <p role="status">{candidateStatus}</p>
           {baselineResources && <DesignComparison baseline={baselineResources} current={resources}/>}
           {alternative && <details><summary>Saved baseline</summary>
@@ -141,6 +154,12 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
 }
 
 const gates: Record<ReviewGate, string> = { CML1: 'Charter', CML2: 'Feasibility', CML3: 'Trade study', CML4: 'Point design' }
+const gatePlain: Record<ReviewGate, string> = {
+  CML1: 'Does the instrument match the goal of finding water ice?',
+  CML2: 'Does the design stay within budget, mass, power and fuel limits?',
+  CML3: 'Did you compare two designs and say why you chose this one?',
+  CML4: 'Have you looked at every remaining risk and accepted it?',
+}
 
 export function Review({ game, save }: { game: Game; save: Save }) {
   const [rationale, setRationale] = useState<TradeStudyEvidence['rationale'] | ''>(save.evidence?.tradeStudy?.rationale ?? '')
@@ -152,13 +171,23 @@ export function Review({ game, save }: { game: Game; save: Save }) {
   const distinct = alternative && engine.hashConfig(alternative) !== engine.hashConfig(config)
   const active = engine.computeResources(config)
   const candidate = alternative && engine.computeResources(alternative)
-  return <section><h1>Engineering review</h1><p className="lede">Complete four CML-inspired evidence gates to authorize this design for launch.</p>
+  const open = (gate: ReviewGate) => !report.gates[gate].passed
+  return <section><h1>Engineering review</h1><p className="lede">Before launch, your design must pass four checkpoints, the <Term id="cml">CML review gates</Term>.</p>
+    <Coach title="Launch checklist" ready="Every checkpoint passed. Press “Authorize launch”." steps={[
+      { label: 'Right instrument', done: !open('CML1'), hint: 'Go back to the builder and pick the Ice-sensitive spectrometer.' },
+      { label: 'Within limits', done: !open('CML2'), hint: 'Go back to the builder and fix the red blockers.' },
+      { label: 'Trade study recorded', done: !open('CML3'), hint: distinct
+        ? 'Under Configuration trade study, choose a reason and press “Record trade study”.'
+        : 'Go back to the builder, save a baseline, then change at least one part.' },
+      { label: 'Warnings accepted', done: !open('CML4'), hint: 'Tick each warning under “Accept current warnings” to accept the risk.' },
+    ]}/>
     <div className="grid-two">
       <div className="panel"><h2>Review gates</h2><ol className="gate-list">{(Object.keys(gates) as ReviewGate[]).map(key => <li key={key}>
-        <div className="spread"><strong>{key} · {gates[key]}</strong><span className="tag">{report.gates[key].passed ? 'Passed' : 'Open'}</span></div>
+        <div className="spread"><strong>{key} · {gates[key]}</strong><span className="tag" data-passed={report.gates[key].passed || undefined}>{report.gates[key].passed ? 'Passed' : 'Open'}</span></div>
+        <p className="gate-plain">{gatePlain[key]}</p>
         <Findings findings={report.gates[key].findings}/>
       </li>)}</ol>
-      <h3>Accept current warnings</h3>
+      <h3>Accept current warnings <Term id="warning" bare/></h3>
       {warnings.length === 0 && <p>No warnings to acknowledge.</p>}
       {warnings.map(item => <label className="check" key={item.id}><input type="checkbox"
         checked={evidence.acknowledgedWarnings.includes(item.id as WarningId)}

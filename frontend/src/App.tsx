@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { useStore } from 'zustand'
 import type { Game } from './app/controller'
@@ -6,6 +6,7 @@ import { Briefing } from './features/Briefing'
 import { Builder, Review } from './features/Design'
 import { Debrief, Flight, Playback } from './features/Flight'
 import { Multiverse } from './features/Multiverse'
+import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
 
@@ -17,6 +18,8 @@ const phases = {
 export function App({ game }: { game: Game }) {
   const { save, recovery, message, playback } = useStore(game.store)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [guide, setGuide] = useState(false)
+  const closeGuide = useCallback(() => setGuide(false), [])
   const content = useRef<HTMLElement>(null)
   const leavingIntro = useRef(false)
   useEffect(() => {
@@ -58,8 +61,12 @@ export function App({ game }: { game: Game }) {
       <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
       <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name]) =>
         <li key={key} aria-current={phase === key ? 'step' : undefined}>{name}</li>)}</ol>
-      <button className="quiet" onClick={() => setConfirmReset(true)}>Reset session</button>
+      <div className="topbar-actions">
+        <button className="quiet" onClick={() => setGuide(true)} aria-haspopup="dialog">How to play</button>
+        <button className="quiet" onClick={() => setConfirmReset(true)}>Reset session</button>
+      </div>
     </header>
+    {guide && <Guide close={closeGuide}/>}
     <main ref={content} tabIndex={-1}>
       {confirmReset && <section className="panel notice" aria-label="Confirm session reset"><h2>Reset this session?</h2>
         <p>This clears the spacecraft draft and all saved universes.</p><div className="actions">
