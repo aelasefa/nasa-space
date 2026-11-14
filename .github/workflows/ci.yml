@@ -1,18 +1,23 @@
 name: Sync upstream main
 
+
 on:
   schedule:
     - cron: '7,22,37,52 * * * *'
+
   workflow_dispatch:
   repository_dispatch:
     types: [upstream-main-updated]
 
+
 permissions:
   contents: read
+
 
 concurrency:
   group: sync-upstream-main
   cancel-in-progress: false
+
 
 jobs:
   sync:
@@ -29,12 +34,14 @@ jobs:
             exit 1
           fi
 
+
       - name: Check out destination main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
           token: ${{ secrets.SYNC_TOKEN }}
+
 
       - name: Merge upstream main and push
         shell: bash
@@ -43,13 +50,15 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git remote add upstream https://github.com/mtourham/nasa-space.git
-          git fetch --no-tags upstream main
+          git -c http.https://github.com/.extraheader= fetch --no-tags upstream main
           upstream_sha=$(git rev-parse FETCH_HEAD)
+
 
           if git merge-base --is-ancestor "$upstream_sha" HEAD; then
             echo 'main already contains all upstream updates.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+
 
           if ! git merge --no-edit "$upstream_sha"; then
             git merge --abort || true
@@ -57,6 +66,8 @@ jobs:
             exit 1
           fi
 
+
           # A normal push also protects against concurrent changes to main.
           git push origin HEAD:main
           echo "Merged upstream commit $upstream_sha into main." >> "$GITHUB_STEP_SUMMARY"
+
