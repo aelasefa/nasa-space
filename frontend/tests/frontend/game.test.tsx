@@ -8,11 +8,17 @@ import { fixture } from './engine.fixture'
 
 afterEach(() => { cleanup(); localStorage.clear() })
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
-const enterBriefing = () => click('Take the console')
+const enterBriefing = () => {
+  click('Take the console')
+  fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
+  click('Set Malapert Massif as target')
+}
 const phase = (game: ReturnType<typeof createGame>) => game.store.getState().save.phase
 
 function review(game: ReturnType<typeof createGame>) {
   game.start()
+  game.chooseTarget('malapert_massif')
+  game.confirmTarget()
   game.saveAlternative()
   game.select('payloadId', 'ice_spectrometer')
   game.select('commsId', 'comms_high')

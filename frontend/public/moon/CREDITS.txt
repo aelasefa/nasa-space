@@ -1,0 +1,8 @@
+lroc_color_2k.jpg
+  Source: NASA's Scientific Visualization Studio, CGI Moon Kit (SVS 4720)
+          https://svs.gsfc.nasa.gov/4720/
+  Built from the LROC WAC color mosaic (Arizona State University, NASA LRO), with
+  LOLA albedo filling the poles. Equirectangular, 2048 x 1024, centered on 0° longitude.
+  Credit: NASA's Scientific Visualization Studio.
+  NASA notes this color map is optimized for aesthetics, not science.
+  SHA-256: f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170

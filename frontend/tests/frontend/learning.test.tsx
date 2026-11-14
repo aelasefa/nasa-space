@@ -13,6 +13,8 @@ function reachBuilder() {
   const game = createGame(engine)
   render(<App game={game}/>)
   click('Take the console')
+  fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Set Malapert Massif as target' }))
   return game
 }
 
@@ -20,6 +22,8 @@ function reachBuilder() {
 function fly(config: Partial<SpacecraftConfig>, observe: ObserveAction, downlink?: DownlinkAction) {
   const game = createGame(engine)
   game.start()
+  game.chooseTarget('malapert_massif')
+  game.confirmTarget()
   game.saveAlternative()
   for (const [field, value] of Object.entries({ payloadId: 'ice_spectrometer', ...config })) {
     game.select(field as keyof SpacecraftConfig, value as never)

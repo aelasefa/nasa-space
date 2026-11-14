@@ -2,11 +2,12 @@ import { createStore } from 'zustand/vanilla'
 import type { ConfigField, DownlinkAction, MissionEngine, MutableField, ObserveAction, SpacecraftConfig, TradeStudyEvidence, WarningId } from './contracts'
 import { initialConfig, options } from './options'
 import { loadSave, saveKey, type Save, type Storage } from './save'
+import { regionById, type RegionId } from './regions'
 
 type Runtime = { save: Save; recovery?: string; message?: string; playback: boolean }
 const blankEvidence = (configHash: string) => ({ configHash, acknowledgedWarnings: [] })
 const fresh = (modelVersion: string): Save => ({
-  schemaVersion: 1, modelVersion, phase: 'briefing', config: initialConfig,
+  schemaVersion: 1, modelVersion, phase: 'briefing', targetId: null, config: initialConfig,
   alternative: null, evidence: null, observation: null, collection: null,
 })
 
@@ -35,7 +36,11 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
 
   return {
     store, engine,
-    start() { if (current().phase === 'briefing') update({ phase: 'builder' }) },
+    start() { if (current().phase === 'briefing') update({ phase: 'target' }) },
+    /** Choose an observation target. It is recorded for the mission; engine v0.1 does not model per-target effects. */
+    chooseTarget(id: RegionId) { if (current().phase === 'target' && regionById(id)) update({ targetId: id }) },
+    confirmTarget() { const save = current(); if (save.phase === 'target' && regionById(save.targetId)) update({ phase: 'builder' }) },
+    retarget() { if (current().phase === 'builder') update({ phase: 'target' }) },
     select<K extends ConfigField>(field: K, value: SpacecraftConfig[K]) {
       const { phase, config } = current()
       if ((phase !== 'builder' && phase !== 'reviews') || config[field] === value ||

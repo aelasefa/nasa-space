@@ -9,6 +9,7 @@ import { Orbit } from '../components/Orbit'
 import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
 import { Coach } from '../components/Coach'
 import { ShadowTradeoff } from './ShadowTradeoff'
+import { regionById } from '../app/regions'
 import { Term } from '../components/Term'
 
 const optionNotes: Record<(typeof options)[(typeof configFields)[number]][number][0], string> = {
@@ -89,7 +90,8 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
         <h1>Spacecraft builder</h1>
         <p className="lede">Design an orbiter that can find the ice signature and get the evidence home. One decision matters most: power in the Moon’s shadow.</p>
         <dl className="builder-brief">
-          <div><dt>Target</dt><dd>Lunar south pole</dd></div>
+          <div><dt>Observation target</dt><dd>{regionById(save.targetId)?.name ?? 'Lunar south pole'}{' '}
+            <button type="button" className="quiet link-button" onClick={game.retarget}>Change</button></dd></div>
           <div><dt>Objective</dt><dd>Water ice survey</dd></div>
         </dl>
       </div>

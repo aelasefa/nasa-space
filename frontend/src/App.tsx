@@ -5,13 +5,14 @@ import type { Game } from './app/controller'
 import { Briefing } from './features/Briefing'
 import { Builder, Review } from './features/Design'
 import { Debrief, Flight } from './features/Flight'
+import { TargetSelect } from './features/TargetSelect'
 import { Multiverse } from './features/Multiverse'
 import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
 
 const phases = {
-  briefing: 'Briefing', builder: 'Builder', reviews: 'Review',
+  briefing: 'Briefing', target: 'Target', builder: 'Builder', reviews: 'Review',
   flight: 'Mission control', debrief: 'Debrief', multiverse: 'Multiverse',
 }
 
@@ -54,7 +55,7 @@ export function App({ game }: { game: Game }) {
     }, shell)
     return () => ctx.revert()
   }, [intro])
-  const backdrop = <SpaceBackdrop mode={intro ? 'intro' : 'app'}/>
+  const backdrop = <SpaceBackdrop mode={intro ? 'intro' : phase === 'target' ? 'target' : 'app'}/>
   if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
     <Briefing start={name => { setCallSign(name); game.start() }}/>
   </main></>
@@ -77,6 +78,7 @@ export function App({ game }: { game: Game }) {
       {message && <p className="notice" role="status">{message}</p>}
       {recovery ? <section className="panel"><h1>Saved session needs attention</h1><p>{recovery}</p>
         <button className="primary" onClick={game.reset}>Reset saved session</button></section> : <>
+        {save.phase === 'target' && <TargetSelect game={game} save={save} callSign={callSign}/>}
         {save.phase === 'builder' && <Builder game={game} save={save}/>}
         {save.phase === 'reviews' && <Review game={game} save={save}/>}
         {save.phase === 'flight' && <Flight game={game} save={save} callSign={callSign}/>}

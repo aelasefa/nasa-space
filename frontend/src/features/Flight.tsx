@@ -15,6 +15,7 @@ import { EvidenceMap } from '../components/EvidenceMap'
 import { ScienceLead } from '../components/ScienceLead'
 import { Term } from '../components/Term'
 import { motionOK } from '../space/motion'
+import { regionById } from '../app/regions'
 
 const choiceNotes: Record<string, string> = {
   observe_full: 'Keep the sensor reading across the whole crater floor. Records everything if the battery lasts.',
@@ -126,7 +127,8 @@ export function Flight({ game, save, callSign }: { game: Game; save: Save; callS
     </ol>
     <p className="arrival" role="status"><span aria-hidden="true">✓</span> Orbit achieved{callSign ? `, ${callSign}` : ''}. LUNA‑01 reached the Moon
       after {scenario.travelTime(save.config.trajectoryId)} on the {label('trajectoryId', save.config.trajectoryId).toLowerCase()},
-      with {number(resources.deltaVMarginMps)} m/s of fuel to spare. It is now circling over the south pole.</p>
+      with {number(resources.deltaVMarginMps)} m/s of fuel to spare. It is now circling over the south pole{regionById(save.targetId)
+        ? <>, with <strong>{regionById(save.targetId)!.name}</strong> in its sights</> : null}.</p>
 
     <div className="mc-grid">
       <div className="panel mc-status" data-shadow={inShadow || undefined}>
@@ -191,7 +193,8 @@ export function Debrief({ game, universe, callSign }: { game: Game; universe: Un
   const replay = (r: Recommendation) => { game.multiverse(); game.branch(universe.id, r.field, r.to) }
   return <section className="debrief"><h1>Mission debrief</h1>
     <div className="panel debrief-lead">
-      <p className="eyebrow">Outcome · <span data-outcome={result.outcome}>{outcomes[result.outcome]}</span></p>
+      <p className="eyebrow">Outcome · <span data-outcome={result.outcome}>{outcomes[result.outcome]}</span>
+        {regionById(game.store.getState().save.targetId) && <> · Target: {regionById(game.store.getState().save.targetId)!.name}</>}</p>
       <p className="debrief-headline">{headline(result, input.config)}</p>
     </div>
 

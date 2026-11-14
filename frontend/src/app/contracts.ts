@@ -147,3 +147,25 @@ export interface MissionEngine {
     | { kind: 'rejected'; reason: string; attempt?: SimulationAttempt }
   compareUniverses(a: Universe, b: Universe): UniverseComparison
 }
+
+/**
+ * Observation target (frontend contract, not yet consumed by the engine).
+ *
+ * The player picks one of NASA's 13 historical (August 2022) Artemis III candidate
+ * regions; see src/app/regions.ts. Engine v0.1.0 runs one scenario for every target,
+ * so the frontend records the choice (Save.targetId) and does NOT pass it to
+ * simulateMission or invent target-dependent effects.
+ *
+ * Proposed backend extension (see docs/TARGET_REGIONS.md):
+ *   MissionInput.targetRegionId?: TargetRegionId
+ *   computed per-target scenario data with provenance, e.g. illumination during the
+ *   observation window and direct-to-Earth visibility, sourced from LOLA-derived products.
+ */
+export type TargetRegionId = import('./regions').RegionId
+export interface TargetSelection {
+  regionId: TargetRegionId
+  /** Always 'historical-2022': the 13-region set, not NASA's October 2024 shortlist. */
+  dataset: 'historical-2022'
+  /** True when the engine actually models this target. False in engine v0.1.0. */
+  affectsSimulation: false
+}

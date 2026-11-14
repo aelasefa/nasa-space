@@ -21,7 +21,7 @@ it('opens with a role and a question, and starts without a name', async () => {
   await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Take the console' }))
   await user.keyboard('{Enter}')
-  expect(screen.getByRole('heading', { name: 'Spacecraft builder' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Where should LUNA‑01 look?' })).toBeTruthy()
 })
 
 it.each(['typing', 'pasting'])('limits a call sign to 16 characters when %s, trims it and never saves it', async method => {
@@ -37,7 +37,10 @@ it.each(['typing', 'pasting'])('limits a call sign to 16 characters when %s, tri
   await user.clear(input)
   await user.type(input, '  Ada  ')
   await user.keyboard('{Enter}')
-  expect(screen.getByRole('heading', { name: 'Spacecraft builder' })).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toMatch(/^Ada, we’ve identified thirteen historical candidate regions/)
+  game.chooseTarget('malapert_massif')
+  game.confirmTarget()
+  expect(await screen.findByRole('heading', { name: 'Spacecraft builder' })).toBeTruthy()
 
   game.saveAlternative()
   game.select('payloadId', 'ice_spectrometer')

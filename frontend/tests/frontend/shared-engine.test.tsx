@@ -12,6 +12,8 @@ it('runs the judge demo with the real shared domain engine', () => {
   render(<App game={game}/>)
   const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
   click('Take the console')
+  fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
+  click('Set Malapert Massif as target')
   click('Use the ice spectrometer')
   click('Save current design as baseline')
   for (const name of ['Solar + storage', 'High reserve', 'High-throughput antenna', 'Direct transfer']) {

@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { regions } from './regions'
+
+const regionIds = regions.map(region => region.id) as [string, ...string[]]
 import type { MissionEngine } from './contracts'
 
 const config = z.object({
@@ -72,7 +75,9 @@ const evidence = z.object({
 })
 const saveSchema = z.object({
   schemaVersion: z.literal(1), modelVersion: z.string().min(1),
-  phase: z.enum(['briefing', 'builder', 'reviews', 'flight', 'debrief', 'multiverse']),
+  phase: z.enum(['briefing', 'target', 'builder', 'reviews', 'flight', 'debrief', 'multiverse']),
+  // Observation target (historical Artemis III candidate region). Optional so older saves still load.
+  targetId: z.enum(regionIds).nullable().optional(),
   config, alternative: config.nullable(), evidence: evidence.nullable(),
   observation: observe.nullable(), collection: collection.nullable(),
 }).refine(save => {
