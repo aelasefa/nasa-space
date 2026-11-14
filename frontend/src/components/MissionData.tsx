@@ -1,3 +1,5 @@
+import { Term } from './Term'
+import type { TermId } from '../app/glossary'
 import type { CausalFinding, Finding, ResolvedEvent, ResourceReport } from '../app/contracts'
 
 export const metrics = {
@@ -6,6 +8,11 @@ export const metrics = {
   downlinkLoadW: ['Downlink load', 'W'], sunlitDownlinkMarginW: ['Downlink power margin', 'W'],
   deltaVMarginMps: ['Delta-v margin', 'm/s'], batteryWh: ['Usable battery', 'Wh'],
 } satisfies Record<keyof ResourceReport, [string, string]>
+
+const metricTerms: Record<keyof ResourceReport, TermId> = {
+  costBU: 'bu', launchMassKg: 'mass', sunlitScienceLoadW: 'watts', sunlitScienceMarginW: 'margin',
+  downlinkLoadW: 'watts', sunlitDownlinkMarginW: 'margin', deltaVMarginMps: 'deltaV', batteryWh: 'battery',
+}
 
 export const number = (value: number) => new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(value)
 export const delta = (value: number) => (value > 0 ? '+' : '') + number(value)
@@ -16,7 +23,7 @@ export const outcomes = { success: 'Success', partial: 'Partial success', failur
 export function ResourceMetrics({ report }: { report: ResourceReport }) {
   return <dl className="metrics">{(Object.keys(metrics) as (keyof ResourceReport)[]).map(key => {
     const [name, unit] = metrics[key]
-    return <div key={key}><dt>{name}</dt><dd>{number(report[key])} <small>{unit}</small></dd></div>
+    return <div key={key}><dt><Term id={metricTerms[key]}>{name}</Term></dt><dd>{number(report[key])} <small>{unit}</small></dd></div>
   })}</dl>
 }
 

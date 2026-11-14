@@ -29,3 +29,6 @@ export const engine: MissionEngine = {
     }
   },
 }
+
+/** Hard limits from the engine's catalog, for displaying spend against caps. */
+export const limits = { budget: domain.BUDGET_CAP_BU, mass: domain.LAUNCH_MASS_CAP_KG }
