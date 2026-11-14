@@ -1,122 +1,81 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
+import { useStore } from 'zustand'
+import type { Game } from './app/controller'
+import { Briefing } from './features/Briefing'
+import { Builder, Review } from './features/Design'
+import { Debrief, Flight, Playback } from './features/Flight'
+import { Multiverse } from './features/Multiverse'
+import { motionOK } from './space/motion'
+import { SpaceBackdrop } from './space/SpaceBackdrop'
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+const phases = {
+  briefing: 'Briefing', builder: 'Builder', reviews: 'Review',
+  flight: 'Mission control', debrief: 'Debrief', multiverse: 'Multiverse',
 }
 
-export default App
+export function App({ game }: { game: Game }) {
+  const { save, recovery, message, playback } = useStore(game.store)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const content = useRef<HTMLElement>(null)
+  const leavingIntro = useRef(false)
+  useEffect(() => {
+    if (leavingIntro.current && save.phase === 'builder') {
+      content.current?.focus({ preventScroll: true })
+      if (window.scrollY > 0) window.scrollTo(0, 0)
+    } else {
+      content.current?.focus()
+    }
+    leavingIntro.current = save.phase === 'briefing'
+  }, [save.phase, playback])
+  const root = save.collection?.universes[0]
+  const phase = playback ? 'flight' : save.phase
+  const intro = phase === 'briefing' && !recovery
+  const shell = useRef<HTMLDivElement>(null)
+  // Each phase arrives like a new transmission: content rises out of the starfield.
+  useLayoutEffect(() => {
+    if (intro || !motionOK() || !content.current) return
+    const ctx = gsap.context(() => {
+      gsap.from(content.current!.querySelectorAll(':scope > section > *, :scope > section .panel'), {
+        opacity: 0, y: 28, filter: 'blur(6px)', duration: 0.9, stagger: 0.05, ease: 'expo.out', clearProps: 'all',
+      })
+    }, content)
+    return () => ctx.revert()
+  }, [intro, phase])
+  useLayoutEffect(() => {
+    if (intro || !motionOK() || !shell.current) return
+    const ctx = gsap.context(() => {
+      gsap.from('.topbar > *', { opacity: 0, y: -16, duration: 1, stagger: 0.08, ease: 'expo.out', clearProps: 'all' })
+    }, shell)
+    return () => ctx.revert()
+  }, [intro])
+  const backdrop = <SpaceBackdrop mode={intro ? 'intro' : 'app'}/>
+  if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
+    <Briefing start={game.start}/>
+  </main></>
+  return <>{backdrop}<div className="shell" ref={shell}>
+    <header className="topbar">
+      <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
+      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name]) =>
+        <li key={key} aria-current={phase === key ? 'step' : undefined}>{name}</li>)}</ol>
+      <button className="quiet" onClick={() => setConfirmReset(true)}>Reset session</button>
+    </header>
+    <main ref={content} tabIndex={-1}>
+      {confirmReset && <section className="panel notice" aria-label="Confirm session reset"><h2>Reset this session?</h2>
+        <p>This clears the spacecraft draft and all saved universes.</p><div className="actions">
+          <button onClick={() => setConfirmReset(false)}>Cancel</button><button onClick={() => { game.reset(); setConfirmReset(false) }}>Clear session</button>
+        </div></section>}
+      {message && <p className="notice" role="status">{message}</p>}
+      {recovery ? <section className="panel"><h1>Saved session needs attention</h1><p>{recovery}</p>
+        <button className="primary" onClick={game.reset}>Reset saved session</button></section> : <>
+        {save.phase === 'builder' && <Builder game={game} save={save}/>}
+        {save.phase === 'reviews' && <Review game={game} save={save}/>}
+        {save.phase === 'flight' && <Flight game={game} save={save}/>}
+        {save.phase === 'debrief' && root && (playback ? <Playback done={game.finishPlayback} result={root.result}/> :
+          <Debrief game={game} result={root.result}/>)}
+        {save.phase === 'multiverse' && save.collection && <Multiverse game={game} collection={save.collection}/>}
+      </>}
+    </main>
+    <footer>Educational model · Mission numbers and trajectories are illustrative. CML gates are game-level proxies.</footer>
+  </div></>
+}
