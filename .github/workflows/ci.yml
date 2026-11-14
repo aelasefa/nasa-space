@@ -50,7 +50,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git remote add upstream https://github.com/mtourham/nasa-space.git
-          git -c http.https://github.com/.extraheader= fetch --no-tags upstream main
+          git fetch --no-tags upstream main
           upstream_sha=$(git rev-parse FETCH_HEAD)
 
 
