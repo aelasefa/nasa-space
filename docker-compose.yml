@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     image: luna01-backend:latest
     container_name: luna01-backend
@@ -16,3 +16,23 @@ services:
       interval: 15s
       timeout: 3s
       retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: luna01-frontend:latest
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: build
+    command: ["sh", "-c", "npm run typecheck && npm test && npm run lint"]

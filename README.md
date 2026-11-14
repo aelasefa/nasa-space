@@ -1,32 +1,35 @@
-# React + TypeScript + Vite
+# LUNA-01
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Educational lunar south-pole orbiter mission game. All mission numbers are
+illustrative, not NASA/GMAT-validated data.
 
-Currently, two official plugins are available:
+| Folder | What it holds | Commands (run inside the folder) |
+|---|---|---|
+| `frontend/` | React + Vite UI, UI tests | `npm ci`, `npm run dev`, `npm test`, `npm run build` |
+| `backend/` | Simulation engine (`src/domain`, `src/data`), HTTP API (`src/server.ts`), engine tests, Dockerfile | `npm ci`, `npm test`, `npm start` |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The UI imports the engine directly from `backend/src/domain`, so both halves run
+the same calculations.
 
-## React Compiler
+Run these commands from the repository root (Docker Compose v2 is required):
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+./run.sh up    # Build and start the frontend and backend; wait for health checks
+./run.sh test  # Run backend/domain tests and frontend tests, typecheck, and lint
+./run.sh logs  # Follow both services' logs
+./run.sh down  # Stop both services without deleting volumes
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Open the frontend at http://localhost:8080. The backend API is available at
+http://localhost:3000, and `/api/` on the frontend proxies to the backend.
+The UI also imports the shared domain engine directly for mission calculations.
+Set `FRONTEND_PORT` (in your environment or a root `.env`) to change the UI port.
+
+`frontend/Dockerfile` uses the repository root as its build context because the
+UI needs `backend/src/`. Its production image serves static files with Nginx as
+a non-root user. The optional `frontend-tests` Compose service runs only with
+the `test` profile. Docker build contexts exclude local dependencies, generated
+output, Git metadata, and environment files.
+
+Product and engineering specs live at the root: `PRODUCT.md`, `ARCHITECTURE.md`,
+`DOMAIN_CONTRACTS.md`, `GAME_RULES.md`, `TASKS.md`, `DEMO_SCRIPT.md`.

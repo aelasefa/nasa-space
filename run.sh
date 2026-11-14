@@ -1,33 +1,54 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# LUNA-01 Core Simulation & Multiverse Engine
+# LUNA-01 frontend and backend
 # Build & Run automation script for Docker & Docker Compose
+
+# Resolve Compose files relative to this script, even when called elsewhere.
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 COMMAND="${1:-up}"
 
 case "$COMMAND" in
+  up|start|test|logs|down|stop) ;;
+  *)
+    echo "Usage: $0 [up|start|test|logs|down|stop]" >&2
+    exit 1
+    ;;
+esac
+
+command -v docker >/dev/null 2>&1 || { echo "Error: Docker is required." >&2; exit 1; }
+docker compose version >/dev/null
+
+case "$COMMAND" in
   up|start)
     echo "========================================================"
-    echo " 🚀 Building & Starting LUNA-01 Backend Container"
+    echo " 🚀 Building & Starting LUNA-01 Frontend and Backend"
     echo "========================================================"
-    docker compose build
-    docker compose up -d
+    command -v curl >/dev/null 2>&1 || { echo "Error: curl is required." >&2; exit 1; }
+    docker compose build backend frontend
+    echo "⏳ Waiting up to 90 seconds for both services to become healthy..."
+    if ! docker compose up -d --wait --wait-timeout 90 backend frontend; then
+      docker compose logs --tail=50 backend frontend >&2
+      exit 1
+    fi
 
-    echo "⏳ Waiting for backend healthcheck (http://localhost:3000/health)..."
-    until curl -sf http://localhost:3000/health > /dev/null 2>&1; do
-      sleep 1
-    done
-
-    echo "✅ Backend is healthy and running at http://localhost:3000"
+    frontend_address="$(docker compose port frontend 8080)"
+    frontend_url="http://localhost:${frontend_address##*:}"
+    echo "✅ Frontend: $frontend_url"
+    echo "✅ Backend: http://localhost:3000"
+    echo "Checking the frontend and its API proxy..."
+    curl --fail --show-error --silent --connect-timeout 5 --max-time 15 "$frontend_url/healthz"
+    curl --fail --show-error --silent --connect-timeout 5 --max-time 15 "$frontend_url/" > /dev/null
+    curl --fail --show-error --silent --connect-timeout 5 --max-time 15 "$frontend_url/api/catalog" > /dev/null
     echo ""
     echo "Testing API endpoints:"
     echo "1. Healthcheck:"
-    curl -s http://localhost:3000/health
-    echo -e "\n"
+    curl --fail --show-error --silent --connect-timeout 5 --max-time 15 http://localhost:3000/health
+    printf '\n\n'
 
     echo "2. Quick Mission Simulation:"
-    curl -s -X POST http://localhost:3000/api/simulate \
+    curl --fail --show-error --silent --connect-timeout 5 --max-time 15 -X POST http://localhost:3000/api/simulate \
       -H "Content-Type: application/json" \
       -d '{
         "config": {
@@ -43,17 +64,18 @@ case "$COMMAND" in
         },
         "scenarioId": "lunar_south_pole_ice_v1",
         "modelVersion": "0.1.0"
-      }' | head -n 25
-    echo -e "\n..."
+      }'
+    printf '\n'
     echo ""
     echo "Use './run.sh logs' to follow logs, or './run.sh down' to stop."
     ;;
 
   test)
     echo "========================================================"
-    echo " 🧪 Running Backend Domain Tests Inside Docker"
+    echo " 🧪 Running Backend and Frontend Tests Inside Docker"
     echo "========================================================"
-    docker compose run --rm backend node --test dist/tests/domain/*.test.js
+    docker compose run --build --rm --no-deps -T backend sh -c 'node --test dist/tests/domain/*.test.js'
+    docker compose --profile test run --build --rm --no-deps -T frontend-tests
     ;;
 
   logs)
@@ -61,16 +83,8 @@ case "$COMMAND" in
     ;;
 
   down|stop)
-    echo "🛑 Stopping LUNA-01 Backend Container..."
-    docker compose down
+    echo "🛑 Stopping LUNA-01 Frontend and Backend..."
+    docker compose --profile test down
     ;;
 
-  *)
-    echo "Usage: ./run.sh [up|test|logs|down]"
-    echo "  up    - Build and launch backend container (default)"
-    echo "  test  - Run test suite inside docker container"
-    echo "  logs  - Follow container logs"
-    echo "  down  - Stop and remove backend container"
-    exit 1
-    ;;
 esac
