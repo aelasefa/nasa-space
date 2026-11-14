@@ -436,38 +436,69 @@ footer { position: relative; }
 .crawl-episode { color: var(--accent); font: 600 .8rem ui-monospace, monospace; letter-spacing: .4em; text-transform: uppercase; margin: 0 0 .6rem; }
 .crawl-title { color: #e7edf0; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 760; letter-spacing: -.03em; line-height: 1.05; margin-bottom: 2.5rem; }
 .crawl-line {
-  color: #f4d78a;
-  font-size: clamp(1.4rem, 3.6vw, 2.6rem);
-  font-weight: 680;
+  color: #ffe08a;
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  font-weight: 720;
   line-height: 1.32;
   letter-spacing: -.01em;
   margin: 0 0 1.6em;
   text-wrap: pretty;
 }
 .crawl-line:focus { outline: none; }
-.crawl-live { height: 420svh; padding: 0; margin-inline: calc(-1 * clamp(1.25rem, 6vw, 5rem)); }
+.crawl-live { height: 460svh; padding: 0; margin-inline: calc(-1 * clamp(1.25rem, 6vw, 5rem)); }
 .crawl-live .crawl-stage {
   position: sticky; top: 0; height: 100svh; overflow: hidden;
-  perspective: 360px; perspective-origin: 50% 20%;
-  -webkit-mask-image: linear-gradient(transparent 4%, #000 42%);
-  mask-image: linear-gradient(transparent 4%, #000 42%);
+  perspective: 700px; perspective-origin: 50% 15%;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 22%);
+  mask-image: linear-gradient(transparent 0, #000 22%);
+}
+/* A dark lane behind the text keeps it legible over the Moon and stars. */
+.crawl-live .crawl-stage::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 46% 75% at 50% 62%, #03060cd9, #03060c80 55%, transparent 80%);
 }
 .crawl-live .crawl-plane {
   position: absolute; left: 50%; bottom: 0;
-  width: min(88vw, 44rem); height: 150svh;
-  transform: translateX(-50%) rotateX(32deg);
+  width: min(92vw, 52rem); height: 130svh;
+  transform: translateX(-50%) rotateX(22deg);
   transform-origin: 50% 100%;
 }
 .crawl-live .crawl-text { position: absolute; top: 100%; left: 0; right: 0; max-width: none; will-change: transform; }
 .crawl-live .crawl-episode, .crawl-live .crawl-title { text-align: center; }
-.crawl-live .crawl-title { color: #f4d78a; text-transform: uppercase; letter-spacing: .02em; }
-.crawl-live .crawl-line {
-  text-align: justify; text-align-last: center; hyphens: manual;
-  font-size: clamp(1.7rem, 5vw, 3.1rem); line-height: 1.25;
-  text-shadow: 0 0 18px #f4d78a40;
+.crawl-live .crawl-episode { font-size: 1.1rem; color: #c9fff4; text-shadow: 0 0 16px #b0e3d9; }
+.crawl-live .crawl-title {
+  color: #ffe9a8; text-transform: uppercase; letter-spacing: .01em;
+  font-size: clamp(2.6rem, 7vw, 5rem); line-height: 1; margin-bottom: 1.2em;
+  text-shadow: 0 0 30px #ffc94d80, 0 2px 0 #00000080;
 }
+.crawl-live .crawl-line {
+  color: #ffe08a;
+  text-align: justify; text-align-last: center; hyphens: manual;
+  font-size: clamp(2.1rem, 5.6vw, 3.8rem); font-weight: 780; line-height: 1.22;
+  text-shadow: 0 0 24px #ffc94d66, 0 2px 0 #000000a0;
+}
+.crawl-live #intro-welcome { color: #fff3c9; }
 @media (max-width: 600px) {
-  .crawl-live .crawl-stage { perspective: 300px; }
+  .crawl-live .crawl-stage { perspective: 520px; }
   .crawl-live .crawl-plane { width: 96vw; }
-  .crawl-live .crawl-line { font-size: 2.1rem; }
+  .crawl-live .crawl-line { font-size: 2.4rem; text-align: center; }
+  .crawl-live .crawl-title { font-size: 2.5rem; }
+}
+
+.planning-margins dl, .rehearsal-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  padding: .8rem 0;
+  border-block: 1px solid var(--builder-border);
+}
+.planning-margins dd, .rehearsal-results dd { font-size: .95rem; }
+.builder [data-negative="true"] { color: #ffc2bc; }
+.planning-comparison { margin-block: .85rem; }
+.planning-comparison caption { text-align: left; color: var(--muted); font-size: .82rem; }
+.planning-comparison th, .planning-comparison td { padding-inline: .2rem; }
+.planning-comparison td { white-space: nowrap; }
+.rehearsal-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+@media (max-width: 500px) {
+  .rehearsal-controls { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
