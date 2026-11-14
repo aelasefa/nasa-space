@@ -1,27 +1,11 @@
 import { useState } from 'react'
 import type { Game } from '../app/controller'
 import type { ReviewGate, TradeStudyEvidence, WarningId } from '../app/contracts'
-import { configFields, fields, label, options, rationaleLabels } from '../app/options'
+import { configFields, fields, label, rationaleLabels } from '../app/options'
 import type { Save } from '../app/save'
-import { estimateResources, planningLimits } from '../app/planning'
-import { DesignComparison, MissionRehearsal, PlanningMargins } from './MissionPlanning'
-import { Orbit } from '../components/Orbit'
-import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
+import { Findings, metrics, number } from '../components/MissionData'
 import { Coach } from '../components/Coach'
 import { Term } from '../components/Term'
-
-const optionNotes: Record<(typeof options)[(typeof configFields)[number]][number][0], string> = {
-  mapping_camera: 'Maps the terrain, but cannot meet the ice science objective.',
-  ice_spectrometer: 'Looks for signs of water ice near the lunar south pole.',
-  solar_light: 'Saves mass, with less stored energy for time in shadow.',
-  solar_storage: 'Stores more energy for observations in shadow.',
-  prop_low: 'Lighter propulsion with less maneuvering reserve.',
-  prop_high: 'More maneuvering reserve at a higher launch mass.',
-  comms_basic: 'Returns less data during the downlink window.',
-  comms_high: 'Returns more data and draws more power.',
-  direct: 'Reaches the Moon sooner but requires more propulsion.',
-  efficient: 'Takes longer and needs less propulsion.',
-}
 
 const weatherScenarios = {
   quiet: {
@@ -47,7 +31,7 @@ const weatherScenarios = {
   },
 } as const
 
-function WeatherPlanner({ config }: { config: Save['config'] }) {
+export function WeatherPlanner({ config }: { config: Save['config'] }) {
   const [scenario, setScenario] = useState<keyof typeof weatherScenarios>('quiet')
   const weather = weatherScenarios[scenario]
   const prepared = config[weather.field] === weather.choice
@@ -68,88 +52,6 @@ function WeatherPlanner({ config }: { config: Save['config'] }) {
       <p className="builder-weather-note"><strong>Your design</strong> {prepared ? weather.ready : weather.gap}</p>
     </div>
     <small>Scenarios are illustrative and do not change the flight simulation.</small>
-  </section>
-}
-
-export function Builder({ game, save }: { game: Game; save: Save }) {
-  const { config, alternative } = save
-  const resources = game.engine?.computeResources(config) ?? estimateResources(config)
-  const baselineResources = alternative && (game.engine?.computeResources(alternative) ?? estimateResources(alternative))
-  const report = game.engine?.evaluateFeasibility(config)
-  const changed = configFields.filter(field => alternative && config[field] !== alternative[field])
-  const candidateStatus = !alternative ? 'Save this design as a baseline for the trade study.'
-    : changed.length === 0 ? 'Baseline saved. Change at least one option to create a design to compare.'
-      : `${changed.length} of ${configFields.length} choices differ from your saved baseline.`
-
-  return <section className="builder">
-    <header className="builder-heading">
-      <div className="builder-hero-copy">
-        <p className="eyebrow"><span className="builder-signal" aria-hidden="true"/> LUNA–01 / Mission design</p>
-        <h1>Spacecraft builder</h1>
-        <p className="lede">Build an orbiter to look for water ice. Pick one option in each category, then compare your design with a saved baseline.</p>
-        <dl className="builder-brief">
-          <div><dt>Target</dt><dd>Lunar south pole</dd></div>
-          <div><dt>Objective</dt><dd>Water ice survey</dd></div>
-        </dl>
-      </div>
-      <figure className="builder-orbit">
-        <Orbit/>
-        <figcaption><span>01 / Lunar approach</span><span>Orbit schematic</span></figcaption>
-      </figure>
-    </header>
-    <Coach title="Your design checklist" ready="Press “Open engineering review” to check your design." steps={[
-      { label: 'Pick the ice instrument', done: config.payloadId === 'ice_spectrometer',
-        hint: 'Under 01 Scientific payload, pick the Ice-sensitive spectrometer. It is the only instrument that can find water ice.' },
-      { label: 'Stay within limits', done: report ? report.eligible : true,
-        hint: 'Fix the red items under Engineering limits: cut cost or mass, or pick propulsion that covers your route.' },
-      { label: 'Save a baseline', done: Boolean(alternative),
-        hint: 'Press “Save trade study candidate” to keep a copy of this design to compare against.' },
-      { label: 'Change one part', done: changed.length > 0,
-        hint: 'Change at least one part, so you have two different designs to compare.' },
-    ]}/>
-    <div className="builder-layout">
-      <div className="builder-choices">{configFields.map((field, index) => <fieldset className="panel builder-group" key={field} aria-labelledby={`builder-${field}`}>
-        <h2 id={`builder-${field}`}><span aria-hidden="true">0{index + 1}</span> {fields[field]}</h2>
-        <div className="builder-options">{options[field].map(([id, name]) => <label key={id}>
-          <input type="radio" name={field} checked={config[field] === id} onChange={() => game.select(field, id)}
-            aria-label={name} aria-describedby={`builder-${id}`}/>
-          <span><strong>{name}</strong><small id={`builder-${id}`}>{optionNotes[id]}</small></span>
-        </label>)}</div>
-      </fieldset>)}<MissionRehearsal config={config}/></div>
-      <aside className="builder-sidebar" aria-label="Design summary">
-        <section className="panel builder-resources">
-          <p className="eyebrow">Spacecraft / Resource envelope</p>
-          <h2>Engineering limits</h2>
-          <dl className="builder-caps">
-            <div><dt><Term id="bu">Budget</Term></dt><dd>{number(resources.costBU)} <small>/ </small>{planningLimits.budget} <small>BU</small></dd></div>
-            <div><dt><Term id="mass">Launch mass</Term></dt><dd>{number(resources.launchMassKg)} <small>/ </small>{planningLimits.mass} <small>kg</small></dd></div>
-          </dl>
-          <PlanningMargins resources={resources} config={config}/>
-          {report ? <>
-            <p className="tag" data-severity={report.eligible ? undefined : 'blocker'}>{report.eligible ? 'Engineering feasible' : 'Feasibility blockers'}</p>
-            <Findings findings={[...report.blockers, ...report.warnings]}/>
-          </> : <p>Resource totals are planning estimates. Engineering review and flight require the shared simulation engine.</p>}
-          <details><summary>All resource metrics</summary><ResourceMetrics report={resources}/></details>
-        </section>
-        <WeatherPlanner config={config}/>
-        <section className="panel builder-study">
-          <p className="eyebrow">Configuration / Design log</p>
-          <h2>Trade study</h2>
-          <p className="fine">A <Term id="tradeStudy">trade study</Term> compares your current design with a saved <Term id="baseline">baseline</Term>.</p>
-          <p role="status">{candidateStatus}</p>
-          {baselineResources && <DesignComparison baseline={baselineResources} current={resources}/>}
-          {alternative && <details><summary>Saved baseline</summary>
-            <dl className="builder-baseline">{configFields.map(field => <div key={field}>
-              <dt>{fields[field]}</dt><dd>{label(field, alternative[field])}{changed.includes(field) && <small> · Changed</small>}</dd>
-            </div>)}</dl>
-          </details>}
-          <div className="builder-actions">
-            <button className="quiet" onClick={game.saveAlternative}>{alternative ? 'Replace baseline with current design' : 'Save trade study candidate'}</button>
-            <button className="primary" onClick={game.reviews} disabled={!game.engine}>Open engineering review</button>
-          </div>
-        </section>
-      </aside>
-    </div>
   </section>
 }
 
@@ -178,7 +80,7 @@ export function Review({ game, save }: { game: Game; save: Save }) {
       { label: 'Within limits', done: !open('CML2'), hint: 'Go back to the builder and fix the red blockers.' },
       { label: 'Trade study recorded', done: !open('CML3'), hint: distinct
         ? 'Under Configuration trade study, choose a reason and press “Record trade study”.'
-        : 'Go back to the builder, save a baseline, then change at least one part.' },
+        : 'Go back to the builder and change at least one part from the saved baseline.' },
       { label: 'Warnings accepted', done: !open('CML4'), hint: 'Tick each warning under “Accept current warnings” to accept the risk.' },
     ]}/>
     <div className="grid-two">

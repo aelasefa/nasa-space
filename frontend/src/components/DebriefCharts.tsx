@@ -38,7 +38,7 @@ export function ScoreChart({ result }: { result: MissionResult }) {
   const rows = scoreParts.map(([key, name, weight, note]) => {
     const max = weight * 10
     const value = score[key] * weight / 10
-    return { label: name, name, value, max, scale: 400, text: `${number(value)} / ${max}`, note }
+    return { label: name, name, value, max, scale: 400, text: `${Math.round(value)} / ${max}`, note }
   })
   const capped = score.rawMPI > score.mpi
   return <section className="panel chart-panel">

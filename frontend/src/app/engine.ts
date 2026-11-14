@@ -32,3 +32,16 @@ export const engine: MissionEngine = {
 
 /** Hard limits from the engine's catalog, for displaying spend against caps. */
 export const limits = { budget: domain.BUDGET_CAP_BU, mass: domain.LAUNCH_MASS_CAP_KG }
+
+/** Scenario values the UI shows alongside engine results (never used to compute outcomes). */
+export const scenario = {
+  shadowHours: domain.E1_OBSERVATION_DURATION_HOURS,
+  travelTime: (id: keyof typeof domain.TRAJECTORY_CATALOG) => domain.TRAJECTORY_CATALOG[id].narrativeTravelTime,
+}
+
+/** The engine's component catalog (illustrative game values), for showing specs. Read-only. */
+export const catalog = {
+  payloadId: domain.PAYLOAD_CATALOG, powerId: domain.POWER_CATALOG, propulsionId: domain.PROPULSION_CATALOG,
+  commsId: domain.COMMS_CATALOG, trajectoryId: domain.TRAJECTORY_CATALOG,
+  bus: { massKg: domain.BASE_BUS_MASS_KG, sunlitLoadW: domain.BASE_BUS_SUNLIT_LOAD_W, shadowLoadW: domain.BASE_BUS_SHADOW_LOAD_W },
+}

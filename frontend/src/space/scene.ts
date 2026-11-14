@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import gsap from 'gsap'
 
-export type SceneMode = 'intro' | 'app'
+/** 'target': the real NASA globe is on screen, so the decorative Moon steps out of the way. */
+export type SceneMode = 'intro' | 'app' | 'target'
 
 export interface SpaceScene {
   setMode(mode: SceneMode): void
@@ -264,7 +265,8 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
       : (narrow ? { x: -1.6, y: -3.2, z: -12 } : { x: -6.2, y: -2.6, z: -12 })
     const d = instant || reduced ? 0 : 2.2
     gsap.to(system.position, { x: moonAt.x, y: moonAt.y, z: moonAt.z, duration: d, ease: 'power3.inOut', overwrite: true })
-    gsap.to(system.scale, { x: moonAt.s, y: moonAt.s, z: moonAt.s, duration: d, ease: 'power3.inOut', overwrite: true })
+    const s = mode === 'target' ? 0.0001 : moonAt.s
+    gsap.to(system.scale, { x: s, y: s, z: s, duration: d, ease: 'power3.inOut', overwrite: true })
     gsap.to(earth.position, { ...earthAt, duration: d, ease: 'power3.inOut', overwrite: true })
   }
 
@@ -301,7 +303,7 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
     frame = requestAnimationFrame(tick)
     // The background barely moves behind the app screens: 30 fps is plenty there.
     const warping = state.speed > 1.5
-    if (state.mode === 'app' && !warping && now - lastRender < 32) return
+    if (state.mode !== 'intro' && !warping && now - lastRender < 32) return
     lastRender = now
     const dt = Math.min(clock.getDelta(), 0.05)
     const t = clock.elapsedTime
