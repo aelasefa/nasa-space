@@ -716,3 +716,36 @@ html { scroll-padding-top: 92px; }
   .target-head .historical { grid-column: 1; grid-row: auto; }
   .target-globe { min-height: 58svh; }
 }
+
+/* Spacecraft assembly bay */
+.assembly-steps { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 1rem 0; }
+.assembly-steps button { padding: .5rem .7rem; }
+.assembly-steps button span { margin-right: .25rem; font-variant-numeric: tabular-nums; }
+.assembly-steps [aria-current="step"] { background: #183c54; border-color: #79d6ff; color: #fff; }
+.assembly-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 1rem; align-items: start; }
+.assembly-target { display: flex; align-items: center; gap: .75rem; }
+.assembly-target dl { margin: 0; }
+.craft { height: clamp(210px, 33vw, 350px); background: radial-gradient(ellipse, #173047, #0a1321 70%); border-radius: .6rem; overflow: hidden; }
+.craft-fallback { padding: 1rem; border: 1px dashed var(--line); border-radius: .6rem; }
+.mc-status .craft { height: clamp(165px, 24vw, 250px); margin-bottom: .75rem; }
+.assembly-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .75rem; margin: .75rem 0; }
+.assembly-specs dt { font-size: .8rem; }
+.assembly-specs dd { margin: .2rem 0 0; font-weight: 600; }
+.assembly-hud > div { padding: .55rem; border: 1px solid var(--line); border-radius: .4rem; }
+.assembly-choices { min-width: 0; margin: 1rem 0; padding: 0; border: 0; }
+.assembly-choices legend { font-weight: 700; margin-bottom: .35rem; }
+.assembly-option { padding: .75rem; border: 1px solid var(--line); border-radius: .55rem; margin-bottom: .5rem; }
+.assembly-option[data-selected] { border-color: #79d6ff; background: #142a3d; }
+.assembly-option-name { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; }
+.assembly-option-name label { font-weight: 700; cursor: pointer; padding-block: .35rem; }
+.assembly-option p { margin: .4rem 0; }
+.assembly-installed { padding: 0; list-style: none; }
+.assembly-installed li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin: .4rem 0; }
+.assembly-card details { margin-block: 1rem; }
+.assembly-card .assembly-actions { justify-content: space-between; }
+@media (max-width: 720px) {
+  .assembly-grid { grid-template-columns: minmax(0, 1fr); }
+  .assembly .builder-brief { flex-wrap: wrap; }
+  .assembly-steps { gap: .3rem; }
+  .assembly-steps button { font-size: .85rem; }
+}

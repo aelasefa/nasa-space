@@ -7,7 +7,6 @@ import { label, options } from './options'
  * the engine in backend/src/domain stays the single source of truth.
  */
 
-export const scienceLead = { name: 'Dr. Noor Haddad', role: 'Science lead', initials: 'NH' }
 
 const number = (value: number) => new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(value)
 const pct = (fraction: number) => `${Math.round(fraction * 100)}%`

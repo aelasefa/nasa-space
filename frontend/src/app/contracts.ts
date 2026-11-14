@@ -169,3 +169,74 @@ export interface TargetSelection {
   /** True when the engine actually models this target. False in engine v0.1.0. */
   affectsSimulation: false
 }
+
+// Proposed v0.2 display contract, intentionally separate from MissionEngine and v0.1 saves.
+export namespace EngineV02Proposal {
+  export type Slot = 'bus' | 'solar' | 'battery' | 'propulsion' | 'comms' | 'payload' | 'thermal' | 'attitude' | 'redundancy' | 'storage'
+  export type Provenance = {
+    basis: 'sourced' | 'derived' | 'illustrative'
+    reference: string
+    assumptions: readonly string[]
+  }
+  export interface Quantity {
+    value: number
+    unit: string
+    provenance: Provenance
+  }
+  export interface Part {
+    id: string
+    slot: Slot
+    name: string
+    parameters: Readonly<Record<string, Quantity>>
+    compatibilityRuleIds: readonly string[]
+  }
+  export interface Catalog {
+    scenarioId: string
+    modelVersion: string
+    catalogVersion: string
+    slots: Readonly<Partial<Record<Slot, { min: number; max: number }>>>
+    parts: readonly Part[]
+  }
+  export type Design = Readonly<Partial<Record<Slot, readonly string[]>>> & { routeId: string }
+  export type Phase = 'transfer' | 'commissioning' | 'survey' | 'downlink'
+  export type EventId = 'eclipse_deficit' | 'array_deployment' | 'wheel_saturation' | 'thermal_warning' |
+    'trajectory_correction' | 'calibration_drift' | 'hydrogen_signature' | 'conflicting_measurements' |
+    'extra_observation' | 'weak_downlink' | 'storage_warning' | 'missed_window' | 'memory_error'
+  export interface EventKey {
+    eventId: EventId
+    occurrenceId: string
+    phase: Phase
+  }
+  export interface Snapshot {
+    segmentId: string
+    metrics: Readonly<Record<string, Quantity>>
+    flags: Readonly<Record<string, boolean>>
+  }
+  export interface Trace {
+    ruleId: string
+    sourceIds: readonly string[]
+    effect: string
+    severity: 'info' | 'warning' | 'failure'
+  }
+  export interface Choice { id: string; label: string; tradeoff: string }
+  export type Decision = Pick<EventKey, 'occurrenceId'> & { choiceId: string }
+  export interface Resolution {
+    choiceId: string
+    before: Snapshot
+    after: Snapshot
+    traces: readonly Trace[]
+  }
+  export type Event = EventKey & (
+    | { state: 'eligible'; triggerRuleId: string }
+    | { state: 'triggered'; triggerRuleId: string; before: Snapshot; choices: readonly Choice[]; radioLineId: string }
+    | { state: 'resolved'; resolution: Resolution }
+    | { state: 'recorded'; resolution: Resolution; sequence: number }
+  )
+  export interface ReplayInput {
+    scenarioId: string
+    modelVersion: string
+    catalogVersion: string
+    design: Design
+    decisions: readonly Decision[]
+  }
+}

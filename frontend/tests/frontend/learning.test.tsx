@@ -44,20 +44,20 @@ const lead = () => screen.getByText((_, el) => el?.classList.contains('debrief-h
 
 it('teaches the builder through the shadow power tradeoff, with engine numbers', () => {
   const game = reachBuilder()
-  const tradeoff = screen.getByRole('region', { name: 'Can we afford to stay awake in shadow?' })
-  click('Use the ice spectrometer')
+  click('Science')
+  fireEvent.click(screen.getByRole('radio', { name: 'Ice-sensitive spectrometer' }))
+  click('Battery')
+  const tradeoff = screen.getByRole('group', { name: 'Power system' })
   expect(game.store.getState().save.config.payloadId).toBe('ice_spectrometer')
   // 80 Wh battery vs 60 Wh keep-alive + 85 W × 2 h = 230 Wh needed; engine says 56% of the survey.
   expect(within(tradeoff).getAllByText('80 Wh')).toHaveLength(1)
   expect(within(tradeoff).getAllByText('230 Wh')).toHaveLength(2)
   expect(within(tradeoff).getByText('56%')).toBeTruthy()
-  expect(within(tradeoff).getByText(/\+15 BU and \+40 kg over lightweight solar/)).toBeTruthy()
-
-  click('Save current design as baseline')
-  click('Install solar + storage')
-  fireEvent.change(screen.getByLabelText('Why is the current design better?'), { target: { value: 'science' } })
+  fireEvent.click(screen.getByRole('radio', { name: 'Solar + storage' }))
+  click('Review design')
+  fireEvent.change(screen.getByLabelText('Reason for choosing the current design'), { target: { value: 'science' } })
   click('Record decision')
-  expect(within(tradeoff).getByText(/Decision recorded: scientific return/)).toBeTruthy()
+  expect(screen.getByText('Decision recorded: Scientific return.')).toBeTruthy()
   click('Open engineering review')
   const gate = screen.getByText('CML3 · Trade study').closest('li')!
   expect(within(gate).getByText('Passed')).toBeTruthy()

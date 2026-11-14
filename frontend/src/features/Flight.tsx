@@ -1,3 +1,6 @@
+import { CraftView } from '../craft/CraftView'
+import { Transmission } from '../components/Radio'
+import { luna01 } from '../missions/luna01'
 import { useEffect, useRef, useState } from 'react'
 import type { Game } from '../app/controller'
 import type { Save } from '../app/save'
@@ -76,6 +79,7 @@ function DownlinkMoment({ game, save }: { game: Game; save: Save }) {
     <p>{recorded !== null && fullCapacity !== undefined
       ? <>The orbiter is holding <strong>{recorded} points</strong>. With the {antenna}, this <Term id="downlink">downlink</Term> can carry at most <strong>{points(fullCapacity)}</strong> science points.</>
       : <>Decide what the <Term id="downlink">downlink</Term> sends first.</>}</p>
+    <Transmission from={luna01.crew.reyes}>Earth is in view. Do we send science first, or reserve part of the link for a health report?</Transmission>
     <div className="choices-flight">{previews.map(preview => {
       const sent = preview.result ? points(preview.result.returnedSciencePoints) : null
       return <div className="choice-card" key={preview.id}>
@@ -133,6 +137,9 @@ export function Flight({ game, save, callSign }: { game: Game; save: Save; callS
     <div className="mc-grid">
       <div className="panel mc-status" data-shadow={inShadow || undefined}>
         <div className="mc-orbit"><Orbit active/><span className="mc-shadow" aria-hidden="true"/></div>
+        <CraftView design={luna01.design(save.config)} label="LUNA-01 in flight"
+          effects={{ shadow: inShadow, scanning: inShadow && event?.status !== 'conserved' && event?.status !== 'bus_energy_failure' &&
+            (event?.status !== 'science_cutoff' || beat < 2), downlink: stage === 'downlink' }}/>
         <BatteryGauge capacity={capacity} level={level} label={!event ? 'Full, charged in sunlight.'
           : inShadow ? 'Running on battery in shadow.' : 'After the shadow pass.'}/>
         {event && (passDone || beat >= 3) && <EvidenceMap title="Recorded on the orbiter"
@@ -144,8 +151,7 @@ export function Flight({ game, save, callSign }: { game: Game; save: Save; callS
           <h2>Shadow pass: keep observing, or play it safe?</h2>
           <p>The orbiter is about to cross the Moon’s shadow for {scenario.shadowHours} hours. The solar panels stop working,
             so everything runs on the battery, which starts full.</p>
-          <ScienceLead>The signal is on the crater floor, and the floor is in shadow. If we keep observing, we see all of it,
-            as long as the battery lasts.</ScienceLead>
+          <Transmission from={luna01.crew.reyes}>The signal is on the crater floor. Keep the instrument running if you can, or conserve the battery for spacecraft systems.</Transmission>
           <div className="choices-flight">{options.observeAction.map(([id, name]) => <div className="choice-card" key={id}>
             <button onClick={() => game.observe(id)} aria-describedby={`choice-${id}`}>{name}</button>
             <p id={`choice-${id}`}>{choiceNotes[id]}</p>
@@ -162,7 +168,7 @@ export function Flight({ game, save, callSign }: { game: Game; save: Save; callS
             <p className="pass-headline"><strong>{result.title}.</strong> {result.text}</p>
             <details><summary>Replay the pass, step by step</summary><ol className="beats">{pass!.beats.map(item =>
               <li key={item.id} data-tone={item.tone}><strong>{item.title}</strong><p>{item.text}</p></li>)}</ol></details>
-            <ScienceLead>{shadowLeadLine(event.status)}</ScienceLead>
+            <Transmission from={luna01.crew.amina}>{shadowLeadLine(event.status)}</Transmission>
           </div>
         })()}
         {stage === 'downlink' && <DownlinkMoment game={game} save={save}/>}

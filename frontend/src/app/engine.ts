@@ -38,3 +38,10 @@ export const scenario = {
   shadowHours: domain.E1_OBSERVATION_DURATION_HOURS,
   travelTime: (id: keyof typeof domain.TRAJECTORY_CATALOG) => domain.TRAJECTORY_CATALOG[id].narrativeTravelTime,
 }
+
+/** The engine's component catalog (illustrative game values), for showing specs. Read-only. */
+export const catalog = {
+  payloadId: domain.PAYLOAD_CATALOG, powerId: domain.POWER_CATALOG, propulsionId: domain.PROPULSION_CATALOG,
+  commsId: domain.COMMS_CATALOG, trajectoryId: domain.TRAJECTORY_CATALOG,
+  bus: { massKg: domain.BASE_BUS_MASS_KG, sunlitLoadW: domain.BASE_BUS_SUNLIT_LOAD_W, shadowLoadW: domain.BASE_BUS_SHADOW_LOAD_W },
+}

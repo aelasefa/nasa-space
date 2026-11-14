@@ -1,13 +1,7 @@
-import type { ReactNode } from 'react'
-import { scienceLead } from '../app/story'
+import { luna01 } from '../missions/luna01'
+import { Transmission } from './Radio'
 
-/** The mission's one recurring voice. */
-export function ScienceLead({ children }: { children: ReactNode }) {
-  return <figure className="lead">
-    <span className="lead-avatar" aria-hidden="true">{scienceLead.initials}</span>
-    <div>
-      <blockquote>{children}</blockquote>
-      <figcaption>{scienceLead.name} · {scienceLead.role}</figcaption>
-    </div>
-  </figure>
+/** The science lead's recurring voice (Dr. Chen), as a Mission Control radio caption. */
+export function ScienceLead({ children }: { children: string }) {
+  return <Transmission from={luna01.crew.chen}>{children}</Transmission>
 }

@@ -54,6 +54,13 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
         alternative: { ...save.config }, evidence: engine ? blankEvidence(engine.hashConfig(save.config)) : null,
       })
     },
+    /** Use the starter design as the comparison baseline, so every build has something to compare against. */
+    baselineStarter() {
+      const save = current()
+      if (save.phase === 'builder' && !save.alternative) update({
+        alternative: { ...initialConfig }, evidence: engine ? blankEvidence(engine.hashConfig(save.config)) : null,
+      })
+    },
     builder() { if (current().phase === 'reviews') update({ phase: 'builder' }) },
     reviews() {
       if (engine && current().phase === 'builder') {

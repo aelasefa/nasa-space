@@ -1,3 +1,5 @@
+import { Transmission } from '../components/Radio'
+import { luna01 } from '../missions/luna01'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { Game } from '../app/controller'
 import type { Save } from '../app/save'
@@ -109,10 +111,7 @@ export function TargetSelect({ game, save, callSign = '' }: { game: Game; save: 
       </div>
 
       <aside className="target-side panel" aria-label="Candidate regions">
-        <figure className="radio">
-          <figcaption><span className="radio-dot" aria-hidden="true"/> Mission Control <small>· fictional dialogue, real places</small></figcaption>
-          <blockquote role="status">{briefing(selected, shared, callSign)}</blockquote>
-        </figure>
+        <Transmission from={luna01.crew.reyes} urgent>{briefing(selected, shared, callSign)}</Transmission>
         {shared && <div className="shared-choice" role="group" aria-label="Regions in this mapped area">
           {shared.regionIds.map(id => <button key={id} type="button" onClick={() => choose(id)}>{regionById(id)!.name}</button>)}
         </div>}
