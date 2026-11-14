@@ -6,6 +6,7 @@ import type { Save } from '../app/save'
 import { estimateResources, planningLimits } from '../app/planning'
 import { DesignComparison, MissionRehearsal, PlanningMargins } from './MissionPlanning'
 import { Orbit } from '../components/Orbit'
+import { PREVIEW_MODEL_VERSION } from '../app/previewEngine'
 import { Findings, ResourceMetrics, metrics, number } from '../components/MissionData'
 
 const optionNotes: Record<(typeof options)[(typeof configFields)[number]][number][0], string> = {
@@ -113,10 +114,11 @@ export function Builder({ game, save }: { game: Game; save: Save }) {
             <div><dt>Launch mass</dt><dd>{number(resources.launchMassKg)} <small>/ </small>{planningLimits.mass} <small>kg</small></dd></div>
           </dl>
           <PlanningMargins resources={resources} config={config}/>
-          {report ? <>
+          {report && game.engine?.modelVersion !== PREVIEW_MODEL_VERSION ? <>
             <p className="tag" data-severity={report.eligible ? undefined : 'blocker'}>{report.eligible ? 'Engineering feasible' : 'Feasibility blockers'}</p>
             <Findings findings={[...report.blockers, ...report.warnings]}/>
-          </> : <p>Resource totals are planning estimates. Engineering review and flight require the shared simulation engine.</p>}
+          </> : <p>Resource totals are planning estimates. {game.engine ? 'Feasibility is not evaluated in the preview engine.' :
+            'Engineering review and flight require the shared simulation engine.'}</p>}
           <details><summary>All resource metrics</summary><ResourceMetrics report={resources}/></details>
         </section>
         <WeatherPlanner config={config}/>

@@ -5,6 +5,7 @@ import type { MissionResult } from '../app/contracts'
 import { options } from '../app/options'
 import { Causes, number, outcomes, ResourceMetrics, Timeline } from '../components/MissionData'
 import { Orbit } from '../components/Orbit'
+import { PREVIEW_MODEL_VERSION } from '../app/previewEngine'
 
 export function Flight({ game, save }: { game: Game; save: Save }) {
   const engine = game.engine!
@@ -41,11 +42,16 @@ const categories = [
 ] as const
 
 export function Debrief({ game, result }: { game: Game; result: MissionResult }) {
+  // The preview adapter records decisions only; never present its placeholders as a simulated result.
+  const simulated = game.engine?.modelVersion !== PREVIEW_MODEL_VERSION
+  const value = (n: number) => simulated ? number(n) : '—'
   return <section><h1>Mission debrief</h1>
     <div className="panel result-strip">
-      <div><small>Universe A · Outcome</small><strong data-outcome={result.outcome}>{outcomes[result.outcome]}</strong></div>
-      <div><small>Mission Performance Index</small><strong>{number(result.score.mpi)} <span>/ 1,000</span></strong></div>
-      <div><small>Science returned</small><strong>{number(result.returnedSciencePoints)} <span>/ 100</span></strong></div>
+      <div><small>Universe A · Outcome</small>{simulated
+        ? <strong data-outcome={result.outcome}>{outcomes[result.outcome]}</strong>
+        : <strong>Not simulated</strong>}</div>
+      <div><small>Mission Performance Index</small><strong>{value(result.score.mpi)} <span>/ 1,000</span></strong></div>
+      <div><small>Science returned</small><strong>{value(result.returnedSciencePoints)} <span>/ 100</span></strong></div>
     </div>
     <div className="grid-two"><div className="panel"><h2>Score breakdown</h2>
       <dl className="score-lines">{categories.map(([key, name, weight]) => <div key={key}>

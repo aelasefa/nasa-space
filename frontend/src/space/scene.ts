@@ -173,7 +173,7 @@ const DEPTH = 70
 const SPREAD = 34
 
 export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, reduced: boolean): SpaceScene {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: window.devicePixelRatio < 2, alpha: true, powerPreference: 'high-performance' })
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -222,7 +222,7 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
   const system = new THREE.Group()
   const lunarMap = moonTexture()
   const moon = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 128, 128),
+    new THREE.SphereGeometry(1, 72, 72),
     new THREE.MeshStandardMaterial({ map: lunarMap, bumpMap: lunarMap, bumpScale: 1.1, roughness: 0.95, metalness: 0 }),
   )
   moon.rotation.x = -0.45 // south pole toward the viewer
@@ -270,7 +270,7 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
 
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
     renderer.setSize(w, h, false)
     camera.aspect = w / Math.max(1, h)
     camera.updateProjectionMatrix()
@@ -296,28 +296,37 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
   const clock = new THREE.Clock()
   let angle = 0.6
   let frame = 0
-  function tick() {
+  let lastRender = 0
+  function tick(now: number) {
     frame = requestAnimationFrame(tick)
+    // The background barely moves behind the app screens: 30 fps is plenty there.
+    const warping = state.speed > 1.5
+    if (state.mode === 'app' && !warping && now - lastRender < 32) return
+    lastRender = now
     const dt = Math.min(clock.getDelta(), 0.05)
     const t = clock.elapsedTime
 
-    // Stars fly toward the camera and wrap around.
-    const move = state.speed * dt * 4
-    const tail = Math.min(state.speed * 0.09, 14)
-    for (let i = 0; i < STARS; i++) {
-      const k = i * 3
-      positions[k + 2] += move
-      if (positions[k + 2] > 6) positions[k + 2] -= DEPTH
-      const s = i * 6
-      streak[s] = streak[s + 3] = positions[k]
-      streak[s + 1] = streak[s + 4] = positions[k + 1]
-      streak[s + 2] = positions[k + 2]
-      streak[s + 5] = positions[k + 2] - tail
+    // Stars only fly at the camera during the jump; otherwise the field just drifts.
+    // This skips rewriting 2,800 positions and re-uploading them on calm frames.
+    streaks.visible = state.speed > 3
+    if (warping) {
+      const move = state.speed * dt * 4
+      const tail = Math.min(state.speed * 0.09, 14)
+      for (let i = 0; i < STARS; i++) {
+        const k = i * 3
+        positions[k + 2] += move
+        if (positions[k + 2] > 6) positions[k + 2] -= DEPTH
+        const s = i * 6
+        streak[s] = streak[s + 3] = positions[k]
+        streak[s + 1] = streak[s + 4] = positions[k + 1]
+        streak[s + 2] = positions[k + 2]
+        streak[s + 5] = positions[k + 2] - tail
+      }
+      starGeometry.attributes.position.needsUpdate = true
+      if (streaks.visible) streakGeometry.attributes.position.needsUpdate = true
+      streakMaterial.opacity = Math.min(1, Math.max(0, (state.speed - 3) / 25))
     }
-    starGeometry.attributes.position.needsUpdate = true
-    streakGeometry.attributes.position.needsUpdate = true
-    streakMaterial.opacity = Math.min(1, Math.max(0, (state.speed - 3) / 25))
-    if (!reduced) field.rotation.z += dt * 0.006
+    if (!reduced) field.rotation.z += dt * 0.012
 
     if (!reduced) {
       moon.rotation.y += dt * 0.04
@@ -339,7 +348,7 @@ export function createSpaceScene(canvas: HTMLCanvasElement, initial: SceneMode, 
     if (camera.fov !== state.fov) { camera.fov = state.fov; camera.updateProjectionMatrix() }
     renderer.render(scene, camera)
   }
-  tick()
+  frame = requestAnimationFrame(tick)
 
   return {
     setMode(mode) {

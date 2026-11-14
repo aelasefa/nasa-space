@@ -6,6 +6,7 @@ import { Briefing } from './features/Briefing'
 import { Builder, Review } from './features/Design'
 import { Debrief, Flight, Playback } from './features/Flight'
 import { Multiverse } from './features/Multiverse'
+import { PREVIEW_MODEL_VERSION } from './app/previewEngine'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
 
@@ -36,8 +37,8 @@ export function App({ game }: { game: Game }) {
   useLayoutEffect(() => {
     if (intro || !motionOK() || !content.current) return
     const ctx = gsap.context(() => {
-      gsap.from(content.current!.querySelectorAll(':scope > section > *, :scope > section .panel'), {
-        opacity: 0, y: 28, filter: 'blur(6px)', duration: 0.9, stagger: 0.05, ease: 'expo.out', clearProps: 'all',
+      gsap.from(content.current!.querySelectorAll(':scope > section > *'), {
+        opacity: 0, y: 20, duration: 0.6, stagger: 0.04, ease: 'power3.out', clearProps: 'opacity,transform',
       })
     }, content)
     return () => ctx.revert()
@@ -60,6 +61,10 @@ export function App({ game }: { game: Game }) {
         <li key={key} aria-current={phase === key ? 'step' : undefined}>{name}</li>)}</ol>
       <button className="quiet" onClick={() => setConfirmReset(true)}>Reset session</button>
     </header>
+    {game.engine?.modelVersion === PREVIEW_MODEL_VERSION && <p className="preview-banner" role="note">
+      <strong>Preview engine</strong> The shared simulation engine is not connected. Resource totals are planning
+      estimates; flight outcomes, science and scores are placeholders.
+    </p>}
     <main ref={content} tabIndex={-1}>
       {confirmReset && <section className="panel notice" aria-label="Confirm session reset"><h2>Reset this session?</h2>
         <p>This clears the spacecraft draft and all saved universes.</p><div className="actions">
