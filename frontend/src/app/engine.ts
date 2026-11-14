@@ -1,4 +1,4 @@
-import * as domain from '../domain/index'
+import * as domain from '../../../backend/src/domain/index'
 import type { MissionEngine, ResourceReport, UniverseComparison } from './contracts'
 
 // Translate the domain API into the frontend view model without changing calculations.

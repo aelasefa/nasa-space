@@ -36,8 +36,8 @@ export function App({ game }: { game: Game }) {
   useLayoutEffect(() => {
     if (intro || !motionOK() || !content.current) return
     const ctx = gsap.context(() => {
-      gsap.from(content.current!.querySelectorAll(':scope > section > *, :scope > section .panel'), {
-        opacity: 0, y: 28, filter: 'blur(6px)', duration: 0.9, stagger: 0.05, ease: 'expo.out', clearProps: 'all',
+      gsap.from(content.current!.querySelectorAll(':scope > section > *'), {
+        opacity: 0, y: 20, duration: 0.6, stagger: 0.04, ease: 'power3.out', clearProps: 'opacity,transform',
       })
     }, content)
     return () => ctx.revert()

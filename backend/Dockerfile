@@ -1,5 +1,5 @@
 # LUNA-01 Core Simulation & Multiverse Engine
-# Dockerfile for backend service & test runner
+# Dockerfile for backend service & test runner (build context: backend/)
 
 FROM node:22-alpine AS builder
 

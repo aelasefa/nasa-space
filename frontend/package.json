@@ -1,5 +1,5 @@
 {
-  "name": "nasa-space",
+  "name": "luna-01-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "build:domain": "tsc -p tsconfig.domain.json && node -e \"require('node:fs').writeFileSync('dist-domain/package.json', JSON.stringify({type: 'commonjs'}))\"",
-    "test:domain": "npm run build:domain && node --test dist-domain/tests/domain/*.test.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "gsap": "^3.13.0",

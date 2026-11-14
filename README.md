@@ -1,32 +1,16 @@
-# React + TypeScript + Vite
+# LUNA-01
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Educational lunar south-pole orbiter mission game. All mission numbers are
+illustrative, not NASA/GMAT-validated data.
 
-Currently, two official plugins are available:
+| Folder | What it holds | Commands (run inside the folder) |
+|---|---|---|
+| `frontend/` | React + Vite UI, UI tests | `npm ci`, `npm run dev`, `npm test`, `npm run build` |
+| `backend/` | Simulation engine (`src/domain`, `src/data`), HTTP API (`src/server.ts`), engine tests, Dockerfile | `npm ci`, `npm test`, `npm start` |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The UI imports the engine directly from `backend/src/domain`, so both halves run
+the same calculations. `./run.sh` at the root builds and starts the backend API
+in Docker (`docker-compose.yml`) and serves it on port 3000.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Product and engineering specs live at the root: `PRODUCT.md`, `ARCHITECTURE.md`,
+`DOMAIN_CONTRACTS.md`, `GAME_RULES.md`, `TASKS.md`, `DEMO_SCRIPT.md`.
