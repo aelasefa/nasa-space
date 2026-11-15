@@ -10,16 +10,17 @@ import { RadioProvider, VoiceToggle } from './components/Radio'
 import { Flight } from './features/Flight'
 import { Debrief } from './features/Debrief'
 import { TargetSelect } from './features/TargetSelect'
-import { Multiverse } from './features/Multiverse'
 import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
 
 const phases = {
   briefing: 'Briefing', target: 'Target', builder: 'Build', reviews: 'Review',
-  flight: 'Mission control', debrief: 'Debrief', multiverse: 'Multiverse',
+  flight: 'Mission control', debrief: 'Debrief',
 }
 const phaseOrder = Object.keys(phases)
+/** Multiverse is folded into debrief; keep old saves, but show one final progress step. */
+const progressPhase = (phase: string) => phase === 'multiverse' ? 'debrief' : phase
 
 export function App({ game }: { game: Game }) {
   const { save, recovery, message, playback } = useStore(game.store)
@@ -86,9 +87,11 @@ export function App({ game }: { game: Game }) {
   return <RadioProvider>{backdrop}<div className="shell" ref={shell}>
     <header className="topbar">
       <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
-      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) =>
-        <li key={key} aria-current={phase === key ? 'step' : undefined}
-          data-done={index < phaseOrder.indexOf(phase) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>)}</ol>
+      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) => {
+        const current = progressPhase(phase)
+        return <li key={key} aria-current={current === key ? 'step' : undefined}
+          data-done={index < phaseOrder.indexOf(current) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>
+      })}</ol>
       <div className="topbar-actions">
         <button className="quiet" onClick={() => setGuide(true)} aria-haspopup="dialog">How to play</button>
         <details className="nav-settings" ref={settings}>
@@ -116,9 +119,9 @@ export function App({ game }: { game: Game }) {
         {save.phase === 'builder' && <Builder game={game} save={save} step={builderStep} onStep={setBuilderStep}/>}
         {save.phase === 'reviews' && <Review game={game} save={save} openStep={openStep} rationale={rationale} onRationale={setRationale}/>}
         {phase === 'flight' && <Flight game={game} save={save} callSign={callSign} universe={playback ? root : undefined}/>}
-        {save.phase === 'debrief' && !playback && root && save.collection &&
-          <Debrief game={game} universe={root} collection={save.collection} targetId={save.targetId} callSign={callSign}/>}
-        {save.phase === 'multiverse' && save.collection && <Multiverse game={game} collection={save.collection}/>}
+        {(save.phase === 'debrief' || save.phase === 'multiverse') && !playback && root && save.collection &&
+          <Debrief game={game} universe={root} collection={save.collection} targetId={save.targetId} callSign={callSign}
+            explore={save.phase === 'multiverse'}/>}
       </>}
     </main>
     <footer>Educational model · Mission numbers and trajectories are illustrative. CML gates are game-level proxies.</footer>

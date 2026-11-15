@@ -648,7 +648,7 @@ html { scroll-padding-top: 92px; }
   .action-bar-buttons > button { flex: 1 1 0; }
 }
 
-/* Top-bar mission progress: completed phases and, on phones, "n of 7" */
+/* Top-bar mission progress: completed phases and, on phones, "n of 6" */
 .progress li[data-done] { color: #c5d3da; }
 .progress li[data-done]::before { content: "✓"; color: var(--accent); }
 .progress-count { display: none; }
@@ -762,3 +762,8 @@ html { scroll-padding-top: 92px; }
 .learn-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .35rem .55rem; align-items: start; line-height: 1.5; }
 .learn-list a { color: var(--accent); }
 .learn-list .basis { margin-top: .15rem; }
+
+
+/* Debrief ends the mission; the explorer lives on the same screen. */
+.debrief .multiverse { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.debrief .multiverse .screen-head { margin-bottom: 1rem; }

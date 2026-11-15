@@ -15,10 +15,10 @@ export function Briefing({ start }: { start: (callSign: string) => void }) {
     if (!motionOK() || !hero.current) return
     const ctx = gsap.context(() => {
       gsap.timeline({ defaults: { ease: 'expo.out' } })
-        .from('.intro-transmission', { opacity: 0, y: 10, duration: 2.2 }, 0.2)
-        .from('.intro-title', { opacity: 0, y: 24, duration: 2.4 }, 0.55)
-        .from('.intro-hero h1, .intro-brief', { opacity: 0, y: 20, duration: 2.2, stagger: 0.22 }, 1.0)
-        .from('.intro-hero .lead, .intro-outline, .intro-form', { opacity: 0, y: 16, duration: 1.9, stagger: 0.28 }, 1.7)
+        .from('.intro-transmission', { opacity: 0, y: 10, duration: 1.2 }, 0.1)
+        .from('.intro-title', { opacity: 0, y: 24, duration: 1.3 }, 0.25)
+        .from('.intro-hero h1, .intro-brief', { opacity: 0, y: 20, duration: 1.2, stagger: 0.1 }, 0.45)
+        .from('.intro-hero .lead, .intro-outline, .intro-form', { opacity: 0, y: 16, duration: 1, stagger: 0.12 }, 0.75)
     }, hero)
     return () => ctx.revert()
   }, [])
@@ -32,7 +32,7 @@ export function Briefing({ start }: { start: (callSign: string) => void }) {
       return
     }
     setLaunching(true)
-    if (motionOK()) gsap.to('.intro', { opacity: 0, scale: 0.97, duration: 1.4, ease: 'power3.in' })
+    if (motionOK()) gsap.to('.intro', { opacity: 0, scale: 0.97, duration: 0.9, ease: 'power3.in' })
     warpThen(() => start(callSign))
   }
 

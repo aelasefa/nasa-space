@@ -10,7 +10,7 @@ import { ScienceLead } from '../components/ScienceLead'
 import { Readout, ScreenHeader } from '../components/Screen'
 import { Term } from '../components/Term'
 import { luna01 } from '../missions/luna01'
-import { Comparison } from './Multiverse'
+import { Comparison, Multiverse } from './Multiverse'
 
 const categories = [
   ['science', 'Science return', 40], ['efficiency', 'Resource efficiency', 25], ['reliability', 'Reliability', 15],
@@ -25,8 +25,13 @@ function changeCost(game: Game, config: SpacecraftConfig, rec: Recommendation) {
   return `Cost ${sign(next.costBU - now.costBU)} BU, mass ${sign(next.launchMassKg - now.launchMassKg)} kg.`
 }
 
-export function Debrief({ game, universe, collection, targetId, callSign }: {
-  game: Game; universe: Universe; collection: UniverseCollection; targetId?: string | null; callSign?: string
+const openExplorer = (game: Game) => {
+  game.multiverse()
+  requestAnimationFrame(() => document.getElementById('multiverse-explorer')?.scrollIntoView({ block: 'start' }))
+}
+
+export function Debrief({ game, universe, collection, targetId, callSign, explore = false }: {
+  game: Game; universe: Universe; collection: UniverseCollection; targetId?: string | null; callSign?: string; explore?: boolean
 }) {
   const { result, input } = universe
   const learned = findings(result)
@@ -76,10 +81,10 @@ export function Debrief({ game, universe, collection, targetId, callSign }: {
           <p>{rec.why}</p>
           <p className="fine">{changeCost(game, latest.input.config, rec)} Everything else stays the same, and the same model reruns the flight{parent ? ` from Universe ${latest.id}` : ''}.</p>
           <button type="button" className="primary" onClick={() => replay(rec)}>{rec.action}</button>
-          <button type="button" className="quiet" onClick={game.multiverse}>Choose a different change</button>
+          <button type="button" className="quiet" onClick={() => openExplorer(game)}>Choose a different change</button>
         </> : <>
           <p>{full ? 'All eight universes are used.' : 'Try changing one decision in the Multiverse Explorer to see what it would have done.'}</p>
-          <button type="button" className="primary" onClick={game.multiverse}>Open the Multiverse Explorer</button>
+          <button type="button" className="primary" onClick={() => openExplorer(game)}>Open the Multiverse Explorer</button>
         </>}
       </section>
     </div>
@@ -106,5 +111,7 @@ export function Debrief({ game, universe, collection, targetId, callSign }: {
       </details>
       <details className="panel"><summary>Flight log</summary><Timeline events={result.events}/></details></div>
       <div className="panel"><h2>What shaped the result</h2><Causes causes={result.causes}/></div></div>
+
+    {explore && <Multiverse game={game} collection={collection} embedded/>}
   </section>
 }

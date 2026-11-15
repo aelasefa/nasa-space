@@ -81,7 +81,7 @@ function Summary({ a, b, result }: { a: Universe; b: Universe; result: UniverseC
   </div>
 }
 
-export function Multiverse({ game, collection }: { game: Game; collection: UniverseCollection }) {
+export function Multiverse({ game, collection, embedded = false }: { game: Game; collection: UniverseCollection; embedded?: boolean }) {
   const { rootId, universes } = collection
   const [parentId, setParent] = useState(rootId)
   const [comparisonId, setComparison] = useState(universes.at(-1)?.id !== rootId ? universes.at(-1)!.id : '')
@@ -94,10 +94,17 @@ export function Multiverse({ game, collection }: { game: Game; collection: Unive
   const rec = recommend(parent)
   const existing = rec && universes.find(item => item.parentId === parentId && item.change?.field === rec.field && item.change.to === rec.to)
 
-  return <section className="multiverse">
-    <ScreenHeader eyebrow="LUNA‑01 · Multiverse" title="Multiverse explorer"
-      lede="Change one decision, rerun the same flight with the same model, and see what that single choice did."
-      aside={<button type="button" onClick={game.debrief}>Back to debrief</button>}/>
+  return <section className="multiverse" id="multiverse-explorer" aria-labelledby="multiverse-title">
+    {embedded
+      ? <header className="screen-head">
+          <p className="eyebrow">End of mission · Replay</p>
+          <h2 id="multiverse-title">Multiverse explorer</h2>
+          <p className="lede">Change one decision, rerun the same flight with the same model, and see what that single choice did.</p>
+          <div className="screen-head-aside"><button type="button" className="quiet" onClick={game.debrief}>Hide explorer</button></div>
+        </header>
+      : <ScreenHeader eyebrow="LUNA‑01 · Multiverse" title="Multiverse explorer"
+          lede="Change one decision, rerun the same flight with the same model, and see what that single choice did."
+          aside={<button type="button" onClick={game.debrief}>Back to debrief</button>}/>}
     <div className="multiverse-grid">
       <aside><div className="panel"><div className="spread"><h2>Universe tree</h2><span className="tag">{universes.length} / 8</span></div>
         <ul className="tree"><Tree universes={universes} id={rootId} selected={parentId} onSelect={id => {
