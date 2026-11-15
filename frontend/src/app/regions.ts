@@ -161,6 +161,15 @@ export const unknownProperties: Fact<string>[] = [
   { value: null, basis: 'unknown', note: 'Measured water-ice abundance in or near each region.' },
 ]
 
+/**
+ * Suggested first target. Chosen only on data completeness: it has its own verified LROC
+ * position and its name is on NASA's 2024 list. It does not observe better in the game.
+ */
+export const recommended = {
+  id: 'malapert_massif' as RegionId,
+  why: 'It’s one of the few regions with its own verified position from an LROC mosaic and a place on NASA’s 2024 shortlist, so you can see exactly where you’re pointing. Every region runs the same simulation.',
+}
+
 export const regionById = (id: string | null | undefined) => regions.find(region => region.id === id)
 export const footprintById = (id: string | null | undefined) => footprints.find(item => item.id === id)
 

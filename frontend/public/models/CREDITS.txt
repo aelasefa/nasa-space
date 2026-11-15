@@ -1,0 +1,19 @@
+apollo-lunar-module.glb
+  What: Apollo Lunar Module 3D model, used as an optional landmark in the Lunar Rover
+        ("Scene models" dialog). The drive never depends on it.
+  Origin: NASA 3D Resources (https://science.nasa.gov/3d-resources/,
+          https://github.com/nasa/NASA-3D-Resources).
+  This file: the WebGL conversion published in the CodePawl "nasa-3d-glb" dataset
+          (https://huggingface.co/datasets/codepawl/nasa-3d-glb, object
+          "apollo-lunar-module"). The dataset lists its authors as "NASA (3D Resources)" and
+          its license as "NASA media usage guidelines (no US copyright)".
+  Brought in from: Mamatou/AmanarII, assets/models/apollo-lunar-module.glb (commit 1ee4d33).
+  Format: glTF 2.0 binary, written by glTF-Transform v4.5.1, with EXT_meshopt_compression,
+          EXT_texture_webp and KHR_mesh_quantization (decoded by three.js MeshoptDecoder).
+  Size: 671,028 bytes.
+  SHA-256: e0e504847888d16d17ea37e58c4dc105d7f7c62c897da3cea040420e57ac1bca
+  Use follows NASA's media usage guidelines. No NASA endorsement is implied.
+
+Not bundled
+  AmanarII also held assets/models/nasa-rover.glb (a Mars 2020 Perseverance model). It is a
+  Mars rover, so it is not used for the lunar drive and was left in the source folder.

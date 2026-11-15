@@ -1,253 +1,223 @@
-import { CraftView } from '../craft/CraftView'
-import { Transmission } from '../components/Radio'
-import { luna01 } from '../missions/luna01'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react'
 import type { Game } from '../app/controller'
-import type { Save } from '../app/save'
-import type { DownlinkAction, ResolvedEvent, SpacecraftConfig, Universe } from '../app/contracts'
+import type { DownlinkAction, ObserveAction, ResolvedEvent, Universe } from '../app/contracts'
 import { scenario } from '../app/engine'
+import { assumptions, clock, downlinkBriefing, downlinkDetail, downlinkLine, observeDetail, shadowBriefing, shadowLine, shadowTimeline, tradeoffs, type ShadowFrame } from '../app/flight'
 import { label, options } from '../app/options'
-import {
-  debriefLeadLine, eventById, findings, headline, points, recommend, shadowBeats, shadowEnergy, shadowLeadLine,
-  type Recommendation,
-} from '../app/story'
-import { Causes, number, outcomes, ResourceMetrics, Timeline } from '../components/MissionData'
-import { Orbit } from '../components/Orbit'
-import { ResourceChart, ScienceChart, ScoreChart } from '../components/DebriefCharts'
-import { EvidenceMap } from '../components/EvidenceMap'
-import { ScienceLead } from '../components/ScienceLead'
-import { Term } from '../components/Term'
-import { motionOK } from '../space/motion'
 import { regionById } from '../app/regions'
+import type { Save } from '../app/save'
+import { eventById, metricLabels, points, shadowEnergy, shadowLeadLine, statusLabel } from '../app/story'
+import { EvidenceMap } from '../components/EvidenceMap'
+import { number, ResourceMetrics } from '../components/MissionData'
+import { Orbit } from '../components/Orbit'
+import { Transmission } from '../components/Radio'
+import { ActionBar, Readout, ScreenHeader } from '../components/Screen'
+import { Term } from '../components/Term'
+import { CraftView } from '../craft/CraftView'
+import { luna01 } from '../missions/luna01'
+import type { Character } from '../missions/types'
+import { motionOK } from '../space/motion'
 
-const choiceNotes: Record<string, string> = {
-  observe_full: 'Keep the sensor reading across the whole crater floor. Records everything if the battery lasts.',
-  conserve: 'Pause the sensor in the dark to protect the battery. Keeps only the half of the survey recorded in sunlight.',
+const BEAT_MS = 1800
+const crew = luna01.crew
+const frameTitle = (frame: ShadowFrame, status: string) => ({
+  ingress: 'Shadow ingress',
+  progress: status === 'conserved' ? 'Holding in the dark' : 'Observing the crater floor',
+  cutoff: status === 'bus_energy_failure' ? 'Battery empty: safe mode' : 'Low battery: instrument cutoff',
+  egress: 'Back in sunlight',
+})[frame.id]
+const frameSpeaker: Record<ShadowFrame['id'], Character> = { ingress: crew.amina, progress: crew.chen, cutoff: crew.amina, egress: crew.reyes }
+
+interface Beat { id: string; cue: string; title: string; from: Character; line: string; tone?: string }
+
+function BeatCard({ beat, headingRef, children }: { beat: Beat; headingRef?: Ref<HTMLHeadingElement>; children?: ReactNode }) {
+  return <article className="beat-card" data-cue={beat.cue} data-tone={beat.tone} aria-labelledby={`beat-${beat.id}`}>
+    <p className="eyebrow"><span className="beat-cue" aria-hidden="true"/>Now</p>
+    <h2 id={`beat-${beat.id}`} ref={headingRef} tabIndex={-1}>{beat.title}</h2>
+    <Transmission from={beat.from} urgent>{beat.line}</Transmission>
+    {children}
+  </article>
 }
 
-function BatteryGauge({ capacity, level, label: text }: { capacity: number | null; level: number | null; label: string }) {
-  if (capacity === null || level === null) return null
-  const share = capacity > 0 ? level / capacity : 0
-  return <div className="battery" data-low={share < 0.2 || undefined}>
-    <div className="spread"><span><Term id="battery">Usable battery</Term></span><strong>{number(level)} / {number(capacity)} Wh</strong></div>
-    <div className="battery-track" role="meter" aria-label={text} aria-valuemin={0} aria-valuemax={capacity} aria-valuenow={level}>
-      <span style={{ width: `${share * 100}%` }}/>
-    </div>
-    <small>{text}</small>
+function EventMetrics({ event }: { event: ResolvedEvent }) {
+  return <dl className="metrics">{Object.entries(event.metrics).map(([name, value]) => {
+    const [text, format] = metricLabels[name] ?? [name, number]
+    return <div key={name}><dt>{text}</dt><dd>{format(value)}</dd></div>
+  })}</dl>
+}
+
+/**
+ * One event choice. Compact by default: the trade-off in a sentence, the numbers needed
+ * to decide, and the button that commits. "Show details" opens in place and is a plain
+ * disclosure: opening or closing it never selects or commits anything.
+ */
+function ChoiceCard({ id, name, telemetry, onCommit, children }: {
+  id: ObserveAction | DownlinkAction; name: string; telemetry: ReactNode; onCommit: () => void; children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return <div className="choice-card" id={`choice-${id}`} role="group" aria-label={name}>
+    <p className="choice-tradeoff" id={`choice-${id}-tradeoff`}>{tradeoffs[id]}</p>
+    {telemetry}
+    <button type="button" className="commit" onClick={onCommit} aria-describedby={`choice-${id}-tradeoff`}>{name}</button>
+    <details className="choice-details" onToggle={event => setOpen(event.currentTarget.open)}>
+      <summary>{open ? 'Hide details' : 'Show details'}<span className="sr-only"> for {name}</span></summary>
+      <div className="choice-details-body">{children}</div>
+    </details>
   </div>
 }
 
-/** The shadow pass, beat by beat. Plays itself, can be skipped, and never waits on a timer to unlock anything essential. */
-function ShadowPass({ event, onBeat, onDone }: { event: ResolvedEvent; onBeat: (beat: number) => void; onDone: () => void }) {
-  const { beats } = shadowBeats(event, scenario.shadowHours)
-  const animate = motionOK()
-  const [shown, setShown] = useState(animate ? 1 : beats.length)
-  const done = shown >= beats.length
-  const finished = useRef(false)
-
-  useEffect(() => { onBeat(shown) }, [shown, onBeat])
-  useEffect(() => {
-    if (!done) {
-      const timer = window.setTimeout(() => setShown(count => count + 1), 1500)
-      return () => window.clearTimeout(timer)
-    }
-    if (!finished.current) { finished.current = true; onDone() }
-  }, [done, shown, onDone])
-
-  return <div className="shadow-pass">
-    <ol className="beats">{beats.slice(0, shown).map(beat => <li key={beat.id} data-tone={beat.tone}>
-      <strong>{beat.title}</strong><p>{beat.text}</p>
-    </li>)}</ol>
-    {!done && <button className="quiet" onClick={() => setShown(beats.length)}>Skip to result</button>}
-  </div>
+function Assumptions({ items }: { items: readonly string[] }) {
+  return <>
+    <h4>Model assumptions</h4>
+    <ul className="choice-notes">{items.map(item => <li key={item}>{item}</li>)}</ul>
+  </>
 }
 
-function DownlinkMoment({ game, save }: { game: Game; save: Save }) {
+export function Flight({ game, save, callSign, universe }: { game: Game; save: Save; callSign?: string; universe?: Universe }) {
   const engine = game.engine!
-  const observation = save.observation!
-  const previews = options.downlinkAction.map(([id, name]) => {
-    const attempt = engine.simulateMission({ config: save.config, decisions: { observeAction: observation, downlinkAction: id },
-      scenarioId: 'lunar_south_pole_ice_v1', modelVersion: engine.modelVersion })
-    const result = attempt.kind === 'completed' ? attempt.result : null
-    return { id: id as DownlinkAction, name, result, capacity: result ? eventById(result, 'E2')?.metrics.scienceDownlinkCapacity : undefined }
-  })
-  const recorded = previews[0].result ? points(previews[0].result.collectedSciencePoints) : null
-  const antenna = label('commsId', save.config.commsId).toLowerCase()
-  const fullCapacity = previews.find(p => p.id === 'science_first')?.capacity
-  return <section className="downlink-moment" aria-labelledby="downlink-title">
-    <h2 id="downlink-title" tabIndex={-1}>Back in sunlight: what do we send first?</h2>
-    <p>{recorded !== null && fullCapacity !== undefined
-      ? <>The orbiter is holding <strong>{recorded} points</strong>. With the {antenna}, this <Term id="downlink">downlink</Term> can carry at most <strong>{points(fullCapacity)}</strong> science points.</>
-      : <>Decide what the <Term id="downlink">downlink</Term> sends first.</>}</p>
-    <Transmission from={luna01.crew.reyes}>Earth is in view. Do we send science first, or reserve part of the link for a health report?</Transmission>
-    <div className="choices-flight">{previews.map(preview => {
-      const sent = preview.result ? points(preview.result.returnedSciencePoints) : null
-      return <div className="choice-card" key={preview.id}>
-        <button onClick={() => game.downlink(preview.id)} aria-describedby={`choice-${preview.id}`}>{preview.name}</button>
-        <div id={`choice-${preview.id}`}>
-          {sent !== null && recorded !== null && <>
-            <p className="choice-sends"><strong>Sends {sent} of {recorded}</strong> recorded points to Earth.</p>
-            <div className="energy-bar" aria-hidden="true"><span style={{ width: `${recorded ? (sent / recorded) * 100 : 0}%` }}/></div>
-          </>}
-          <p>{preview.id === 'science_first' ? 'The whole link carries science data.'
-            : 'Part of the link carries spacecraft diagnostics instead. Training comparison: this model doesn’t track what diagnostics are worth, so the only modeled effect is less science and a lower operations score.'}</p>
-        </div>
-      </div>
-    })}</div>
-  </section>
-}
-
-export function Flight({ game, save, callSign }: { game: Game; save: Save; callSign?: string }) {
-  const engine = game.engine!
-  const event = save.observation ? engine.resolveObservation(save.config, save.observation).event : null
-  const resources = engine.computeResources(save.config)
+  const { config } = save
+  const hours = scenario.shadowHours
+  const target = regionById(save.targetId)?.name
+  const resources = engine.computeResources(config)
+  const full = engine.resolveObservation(config, 'observe_full').event
+  const capacity = shadowEnergy(full, hours)?.available ?? resources.batteryWh
+  const event = save.observation ? engine.resolveObservation(config, save.observation).event : null
+  const run = (observeAction: ObserveAction, downlinkAction: DownlinkAction) => {
+    const attempt = engine.simulateMission({ config, decisions: { observeAction, downlinkAction }, scenarioId: 'lunar_south_pole_ice_v1', modelVersion: engine.modelVersion })
+    return attempt.kind === 'completed' ? attempt.result : null
+  }
+  const recorded = save.observation ? run(save.observation, 'science_first')?.collectedSciencePoints ?? 0 : 0
+  const frames = event ? shadowTimeline(event, hours, recorded) : null
   // After a reload the shadow pass has already happened: don't replay it.
-  const [passDone, setPassDone] = useState(Boolean(save.observation))
-  const [beat, setBeat] = useState(0)
-  const downlinkHeading = useRef<HTMLDivElement>(null)
-  const capacity = shadowEnergy(engine.resolveObservation(save.config, 'observe_full').event, scenario.shadowHours)?.available ?? null
-  const pass = event ? shadowBeats(event, scenario.shadowHours) : null
-  const inShadow = Boolean(event) && !passDone && beat < 4
-  const level = pass && (passDone || beat >= 2) ? pass.remaining : capacity
-  const stage = !event ? 'observe' : passDone ? 'downlink' : 'shadow'
-  const onBoard = save.observation ? engine.simulateMission({ config: save.config,
-    decisions: { observeAction: save.observation, downlinkAction: 'science_first' },
-    scenarioId: 'lunar_south_pole_ice_v1', modelVersion: engine.modelVersion }) : null
-  const recordedPoints = onBoard?.kind === 'completed' ? onBoard.result.collectedSciencePoints : 0
+  const [shown, setShown] = useState(() => save.observation ? Number.POSITIVE_INFINITY : 0)
+  const playing = Boolean(event && frames && shown < frames.length)
+  const stage = !event ? 'decide' : playing ? 'shadow' : universe ? 'downlinked' : 'sunlight'
+  const frame = frames ? frames[Math.min(shown, frames.length) - 1] ?? null : null
+  const heading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    if (stage !== 'downlink' || !event || save.collection) return
-    const heading = downlinkHeading.current?.querySelector<HTMLElement>('#downlink-title')
-    heading?.focus({ preventScroll: true })
-    heading?.scrollIntoView?.({ block: 'start', behavior: motionOK() ? 'smooth' : 'auto' })
-  }, [stage, event, save.collection])
+    if (!playing) return
+    const timer = window.setTimeout(() => setShown(count => count + 1), BEAT_MS)
+    return () => window.clearTimeout(timer)
+  }, [playing, shown])
+  useEffect(() => {
+    if (stage === 'decide') return
+    heading.current?.focus({ preventScroll: true })
+    // Once per stage, not per beat: the new heading must be on screen after a choice is committed.
+    heading.current?.scrollIntoView?.({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'auto' })
+  }, [stage])
+
+  const observe = (action: ObserveAction) => {
+    game.observe(action)
+    setShown(motionOK() ? 1 : Number.POSITIVE_INFINITY)
+  }
+
+  const arrival: Beat = { id: 'arrival', cue: 'arrival', title: 'Orbit achieved', from: crew.reyes,
+    line: `Orbit achieved${callSign ? `, ${callSign}` : ''}. ${scenario.travelTime(config.trajectoryId)} on the ${label('trajectoryId', config.trajectoryId).toLowerCase()}, ${number(resources.deltaVMarginMps)} m/s of fuel to spare.${target ? ` ${target} is coming up below us.` : ''}` }
+  const decide: Beat = { id: 'decide', cue: 'decision', title: 'Shadow pass ahead: keep observing, or save the battery?', from: crew.amina, line: shadowBriefing(config, full, hours) }
+  const shadowBeats: Beat[] = event && frames ? frames.slice(0, Math.min(shown, frames.length)).map(item => ({
+    id: item.id, cue: item.id, tone: item.tone, title: frameTitle(item, event.status), from: frameSpeaker[item.id],
+    line: shadowLine(item, event.status, config, hours, target),
+  })) : []
+  const downlinkPreviews = save.observation ? options.downlinkAction.map(([id, name]) => {
+    const result = run(save.observation!, id)
+    const e2 = result ? eventById(result, 'E2') : undefined
+    return { id, name, sent: result ? points(result.returnedSciencePoints) : null, capacity: e2?.metrics.scienceDownlinkCapacity, event: e2 }
+  }) : []
+  const sunlight: Beat = { id: 'sunlight', cue: 'sunlight', title: 'Downlink window: what do we send first?', from: crew.reyes,
+    line: downlinkBriefing(config, recorded, downlinkPreviews[0]?.capacity) }
+  const downlinked: Beat | null = universe ? { id: 'downlink', cue: 'downlink', title: 'Downlink complete', from: crew.reyes,
+    tone: universe.result.returnedSciencePoints < universe.result.collectedSciencePoints ? 'warn' : 'good',
+    line: downlinkLine(config, universe.input.decisions.downlinkAction, universe.result.collectedSciencePoints, universe.result.returnedSciencePoints, callSign) } : null
+  const current = stage === 'decide' ? decide : stage === 'shadow' ? shadowBeats.at(-1)! : stage === 'sunlight' ? sunlight : downlinked!
+  const lead: Beat | null = event && (stage === 'sunlight' || stage === 'downlinked') ? { id: 'lead', cue: 'sunlight', title: 'Science lead on the pass',
+    from: crew.chen, line: shadowLeadLine(event.status) } : null
+  const log = [...shadowBeats, ...(lead ? [lead] : []), ...(universe ? [sunlight] : [])].filter(item => item.id !== current.id)
+
+  const inShadow = stage === 'shadow' && frame?.id !== 'egress'
+  const battery = frame?.batteryWh ?? capacity
+  const timeLeft = !event ? hours : frame ? hours - frame.at : 0
 
   return <section className="mission-control">
-    <h1>Mission control</h1>
-    <ol className="stages" aria-label="Mission stages">
-      <li>01 · Arrival</li>
-      <li aria-current={stage !== 'downlink' ? 'step' : undefined}>02 · Shadow pass</li>
-      <li aria-current={stage === 'downlink' ? 'step' : undefined}>03 · Downlink</li>
-    </ol>
-    <p className="arrival" role="status"><span aria-hidden="true">✓</span> Orbit achieved{callSign ? `, ${callSign}` : ''}. LUNA‑01 reached the Moon
-      after {scenario.travelTime(save.config.trajectoryId)} on the {label('trajectoryId', save.config.trajectoryId).toLowerCase()},
-      with {number(resources.deltaVMarginMps)} m/s of fuel to spare. It is now circling over the south pole{regionById(save.targetId)
-        ? <>, with <strong>{regionById(save.targetId)!.name}</strong> in its sights</> : null}.</p>
+    <ScreenHeader eyebrow={`${luna01.name} · Mission control${target ? ` · ${target}` : ''}`} title="Mission control"
+      aside={<ol className="stages" aria-label="Mission stages">
+        <li aria-current={stage === 'decide' ? 'step' : undefined} data-done={stage !== 'decide' || undefined}>01 · Arrival</li>
+        <li aria-current={stage === 'shadow' ? 'step' : undefined} data-done={stage === 'sunlight' || stage === 'downlinked' || undefined}>02 · Shadow pass</li>
+        <li aria-current={stage === 'sunlight' || stage === 'downlinked' ? 'step' : undefined}>03 · Downlink</li>
+      </ol>}/>
+    <p className="arrival" role="status"><span aria-hidden="true">✓</span> {arrival.line}</p>
 
     <div className="mc-grid">
-      <div className="panel mc-status" data-shadow={inShadow || undefined}>
+      <dl className="readouts shadow-hud mc-hud" aria-label="Shadow pass telemetry">
+        <Readout label="Battery remaining" value={number(Math.round(battery))} unit={`/ ${number(capacity)} Wh`}
+          tone={battery / Math.max(1, capacity) < 0.2 ? 'bad' : undefined}
+          hint={<span className="hud-bar" aria-hidden="true"><span style={{ width: `${Math.max(0, battery / Math.max(1, capacity)) * 100}%` }}/></span>}/>
+        <Readout label="Time left in shadow" value={timeLeft > 0 ? clock(timeLeft) : '0 min'} hint={!event ? `${hours} h pass ahead` : timeLeft > 0 ? 'Running on battery' : 'Back in sunlight'}/>
+        <Readout label="Ice science on board" value={frame ? points(frame.science) : event ? points(recorded) : '—'} unit="/ 100 pts"
+          hint={universe ? `${points(universe.result.returnedSciencePoints)} received on Earth` : undefined}/>
+      </dl>
+
+      <div className="panel mc-decision" aria-live="polite">
+        <BeatCard beat={current} headingRef={heading}>
+          {stage === 'decide' && <>
+            <p className="fine choices-hint">Pick one. The choice is final for this flight.</p>
+            <div className="choices-flight">{options.observeAction.map(([id, name]) => {
+              const preview = run(id, 'science_first')
+              const outcome = engine.resolveObservation(config, id).event
+              const end = shadowTimeline(outcome, hours, preview?.collectedSciencePoints ?? 0)?.at(-1)
+              return <ChoiceCard key={id} id={id} name={name} onCommit={() => observe(id)} telemetry={
+                <dl className="choice-telemetry">
+                  <div><dt>Ice points on board</dt><dd>{preview ? points(preview.collectedSciencePoints) : '—'}<small> / 100</small></dd></div>
+                  <div><dt>Battery after the pass</dt><dd>{end ? number(Math.round(end.batteryWh)) : '—'}<small> Wh</small></dd></div>
+                </dl>}>
+                <p>{observeDetail(config, outcome, hours)}</p>
+                <h4>Engine preview: {statusLabel(outcome.status).toLowerCase()}</h4>
+                <EventMetrics event={outcome}/>
+                <Assumptions items={assumptions.observe}/>
+              </ChoiceCard>
+            })}</div>
+          </>}
+          {stage === 'shadow' && <button type="button" className="quiet" onClick={() => setShown(Number.POSITIVE_INFINITY)}>Skip to result</button>}
+          {stage === 'sunlight' && event && <>
+            <p className="pass-headline" data-tone={frames?.at(-1)?.tone}><strong>Shadow pass: {statusLabel(event.status)}.</strong> {points(recorded)} of 100 ice points on board.</p>
+            <p className="fine choices-hint">Pick one. The choice is final for this flight.</p>
+            <div className="choices-flight">{downlinkPreviews.map(preview => <ChoiceCard key={preview.id} id={preview.id} name={preview.name}
+              onCommit={() => game.downlink(preview.id)} telemetry={preview.sent !== null && <>
+                <p className="choice-sends"><strong>Sends {preview.sent} of {points(recorded)}</strong> recorded points to Earth.</p>
+                <div className="energy-bar" aria-hidden="true"><span style={{ width: `${recorded ? (preview.sent / recorded) * 100 : 0}%` }}/></div>
+              </>}>
+              {preview.sent !== null && <p>{downlinkDetail(preview.id, recorded, preview.sent, preview.capacity)}</p>}
+              {preview.event && <>
+                <h4>Engine preview: {statusLabel(preview.event.status).toLowerCase()}</h4>
+                <EventMetrics event={preview.event}/>
+              </>}
+              <Assumptions items={assumptions.downlink}/>
+            </ChoiceCard>)}</div>
+          </>}
+        </BeatCard>
+        {log.length > 0 && <details className="flight-log" open={stage === 'shadow' || stage === 'downlinked'}><summary>Flight log</summary>
+          <ol className="beats">{log.map(item => <li key={item.id} data-tone={item.tone}><strong>{item.title}</strong><p>{item.line}</p></li>)}</ol>
+        </details>}
+      </div>
+
+      <div className="panel mc-status" data-shadow={inShadow || undefined} data-cue={current.cue}>
         <div className="mc-orbit"><Orbit active/><span className="mc-shadow" aria-hidden="true"/></div>
-        <CraftView design={luna01.design(save.config)} label="LUNA-01 in flight"
-          effects={{ shadow: inShadow, scanning: inShadow && event?.status !== 'conserved' && event?.status !== 'bus_energy_failure' &&
-            (event?.status !== 'science_cutoff' || beat < 2), downlink: stage === 'downlink' }}/>
-        <BatteryGauge capacity={capacity} level={level} label={!event ? 'Full, charged in sunlight.'
-          : inShadow ? 'Running on battery in shadow.' : 'After the shadow pass.'}/>
-        {event && (passDone || beat >= 3) && <EvidenceMap title="Recorded on the orbiter"
-          recorded={recordedPoints} received={null}/>}
-      </div>
-
-      <div className="panel mc-decision" ref={downlinkHeading}>
-        {stage === 'observe' && <>
-          <h2>Shadow pass: keep observing, or play it safe?</h2>
-          <p>The orbiter is about to cross the Moon’s shadow for {scenario.shadowHours} hours. The solar panels stop working,
-            so everything runs on the battery, which starts full.</p>
-          <Transmission from={luna01.crew.reyes}>The signal is on the crater floor. Keep the instrument running if you can, or conserve the battery for spacecraft systems.</Transmission>
-          <div className="choices-flight">{options.observeAction.map(([id, name]) => <div className="choice-card" key={id}>
-            <button onClick={() => game.observe(id)} aria-describedby={`choice-${id}`}>{name}</button>
-            <p id={`choice-${id}`}>{choiceNotes[id]}</p>
-          </div>)}</div>
-        </>}
-        {event && !passDone && <>
-          <h2>Shadow pass</h2>
-          <ShadowPass event={event} onBeat={setBeat} onDone={() => setPassDone(true)}/>
-        </>}
-        {event && passDone && (() => {
-          const result = pass!.beats.find(item => item.id === 'science')!
-          return <div className="pass-result" data-tone={result.tone}>
-            <p className="eyebrow">Shadow pass result</p>
-            <p className="pass-headline"><strong>{result.title}.</strong> {result.text}</p>
-            <details><summary>Replay the pass, step by step</summary><ol className="beats">{pass!.beats.map(item =>
-              <li key={item.id} data-tone={item.tone}><strong>{item.title}</strong><p>{item.text}</p></li>)}</ol></details>
-            <Transmission from={luna01.crew.amina}>{shadowLeadLine(event.status)}</Transmission>
-          </div>
-        })()}
-        {stage === 'downlink' && <DownlinkMoment game={game} save={save}/>}
+        <CraftView design={luna01.design(config)} label="LUNA-01 in flight"
+          effects={{ shadow: inShadow, scanning: stage === 'shadow' && Boolean(frame?.scanning), downlink: stage === 'downlinked' }}/>
+        {(stage === 'sunlight' || stage === 'downlinked') && <EvidenceMap title={universe ? 'Recorded vs. received' : 'Recorded on the orbiter'}
+          recorded={recorded} received={universe ? universe.result.returnedSciencePoints : null}/>}
+        <p className="fine">Playback of the engine’s result. Values at each beat follow its shadow-pass energy model.</p>
       </div>
     </div>
 
-    <details className="panel mc-telemetry"><summary>Secondary telemetry</summary><ResourceMetrics report={resources}/></details>
-  </section>
-}
+    {event && stage !== 'shadow' && <details className="panel mc-telemetry"><summary>Detailed telemetry</summary>
+      <EventMetrics event={event}/>
+      <h3><Term id="margin">Spacecraft resources</Term></h3>
+      <ResourceMetrics report={resources}/>
+    </details>}
 
-const categories = [
-  ['science', 'Science return', 40], ['efficiency', 'Resource efficiency', 25], ['reliability', 'Reliability', 15],
-  ['engineering', 'Engineering quality', 10], ['operations', 'Operations', 10],
-] as const
-
-function changeCost(game: Game, config: SpacecraftConfig, rec: Recommendation) {
-  if (!(rec.field in config)) return 'No change in cost or mass: this is a flight decision.'
-  const now = game.engine!.computeResources(config)
-  const next = game.engine!.computeResources({ ...config, [rec.field]: rec.to })
-  const sign = (value: number) => (value >= 0 ? '+' : '−') + number(Math.abs(value))
-  return `Cost ${sign(next.costBU - now.costBU)} BU, mass ${sign(next.launchMassKg - now.launchMassKg)} kg.`
-}
-
-export function Debrief({ game, universe, callSign }: { game: Game; universe: Universe; callSign?: string }) {
-  const { result, input } = universe
-  const learned = findings(result)
-  const rec = recommend(universe)
-  const replay = (r: Recommendation) => { game.multiverse(); game.branch(universe.id, r.field, r.to) }
-  return <section className="debrief"><h1>Mission debrief</h1>
-    <div className="panel debrief-lead">
-      <p className="eyebrow">Outcome · <span data-outcome={result.outcome}>{outcomes[result.outcome]}</span>
-        {regionById(game.store.getState().save.targetId) && <> · Target: {regionById(game.store.getState().save.targetId)!.name}</>}</p>
-      <p className="debrief-headline">{headline(result, input.config)}</p>
-    </div>
-
-    <div className="grid-two debrief-story">
-      <section className="panel" aria-labelledby="learned-title">
-        <h2 id="learned-title">What Earth learned</h2>
-        <EvidenceMap title="Recorded vs. received" recorded={result.collectedSciencePoints} received={result.returnedSciencePoints}/>
-        <p>{learned.learned}</p>
-        <h3>What’s still uncertain</h3>
-        <p>{learned.uncertain}</p>
-        <ScienceLead>{callSign ? `${callSign}, ${debriefLeadLine(result).replace(/^./, c => c.toLowerCase())}` : debriefLeadLine(result)}</ScienceLead>
-        {input.decisions.downlinkAction === 'health_first' && <p className="fine">You chose Health first. Diagnostics went home too,
-          but this model doesn’t track what they tell the team, so they add nothing here. The modeled effects are fewer science
-          points and a lower operations score.</p>}
-      </section>
-      <section className="panel replay-card" aria-labelledby="replay-title">
-        <h2 id="replay-title">Which decision would you change?</h2>
-        {rec ? <>
-          <p>{rec.why}</p>
-          <p className="fine">{changeCost(game, input.config, rec)} Everything else stays the same, and the same model reruns the flight.</p>
-          <button className="primary" onClick={() => replay(rec)}>{rec.action}</button>
-          <button className="quiet" onClick={game.multiverse}>Choose a different change</button>
-        </> : <>
-          <p>Try changing one decision to see what it would have done.</p>
-          <button className="primary" onClick={game.multiverse}>Explore alternate universes</button>
-        </>}
-      </section>
-    </div>
-
-    <h2 className="debrief-section">Score</h2>
-    <div className="panel result-strip">
-      <div><small><Term id="outcome">Outcome</Term></small><strong data-outcome={result.outcome}>{outcomes[result.outcome]}</strong></div>
-      <div><small><Term id="mpi">Mission Performance Index</Term></small><strong>{number(result.score.mpi)} <span>/ 1,000</span></strong></div>
-      <div><small><Term id="science">Science received</Term></small><strong>{number(points(result.returnedSciencePoints))} <span>/ 100</span></strong></div>
-    </div>
-    <p className="fine">The score ranks how well the mission used its resources. A high score is not proof of ice.</p>
-    <div className="grid-two debrief-charts"><ScoreChart result={result}/><ScienceChart result={result}/></div>
-    <div className="grid-two"><div className="debrief-stack"><ResourceChart result={result}/>
-      <details className="panel"><summary>All numbers</summary>
-        <dl className="score-lines">{categories.map(([key, name, weight]) => <div key={key}>
-          <dt>{name} <small>· {weight}% weight</small></dt><dd>{number(result.score[key])}/100</dd>
-        </div>)}</dl><p>Raw score {number(result.score.rawMPI)} · Outcome cap {number(result.score.cap)}</p>
-        <p>Recorded on the orbiter {number(points(result.collectedSciencePoints))} points · Science per resource {number(result.score.rawSciencePerResource)}</p>
-        <ResourceMetrics report={result.resources}/>
-      </details>
-      <details className="panel"><summary>Flight log</summary><Timeline events={result.events}/></details></div>
-      <div className="panel"><h2>What shaped the result</h2><Causes causes={result.causes}/></div></div>
-    {rec && <div className="actions"><button onClick={game.multiverse}>Explore alternate universes</button></div>}
+    {stage === 'downlinked' && <ActionBar label="Mission control" status="Flight complete">
+      <button type="button" className="primary" onClick={game.finishPlayback}>Open debrief</button>
+    </ActionBar>}
   </section>
 }

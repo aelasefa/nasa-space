@@ -4,9 +4,10 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { Game } from '../app/controller'
 import type { Save } from '../app/save'
 import {
-  basisLabel, footprintById, footprints, formatLatLon, kmFromPole, regionById, regionFacts, regions, sources,
+  basisLabel, footprintById, footprints, formatLatLon, kmFromPole, recommended, regionById, regionFacts, regions, sources,
   unknownProperties, type CandidateRegion, type Fact, type Footprint, type RegionId,
 } from '../app/regions'
+import { ActionBar, ScreenHeader } from '../components/Screen'
 import { motionOK, webglOK } from '../space/motion'
 import type { View } from '../target/MoonGlobe'
 
@@ -22,7 +23,7 @@ function briefing(region: CandidateRegion | undefined, shared: Footprint | null,
   const listed = region.in2024List.value ? 'It’s still on NASA’s 2024 shortlist.' : 'It isn’t on NASA’s 2024 shortlist under that name.'
   if (!fp?.center.value) return `${region.name}. We don’t have a verified position for this one, so I can’t put it on the globe. ${listed}`
   const where = formatLatLon(fp.center.value)
-  return `${region.name}: ${where}, about ${kmFromPole(fp.center.value.lat)} km from the pole. LRO’s camera has mapped it at about one meter per pixel. ${listed}`
+  return `${region.name}: ${where}, about ${kmFromPole(fp.center.value.lat)} km from the pole. LRO’s camera has mapped it at about one meter per pixel. ${listed} If we pick it, that’s where the instrument points when we cross into shadow.`
 }
 
 function SourceLink({ fact }: { fact: Fact<unknown> }) {
@@ -87,15 +88,13 @@ export function TargetSelect({ game, save, callSign = '' }: { game: Game; save: 
   const noop = useCallback(() => {}, [])
   const fp = footprintById(selected?.footprintId)
 
+  const suggestion = regionById(recommended.id)!
   return <section className="target">
-    <header className="target-head">
-      <p className="eyebrow"><span className="builder-signal" aria-hidden="true"/> Step 1 · Observation target</p>
-      <h1>Where should LUNA‑01 look?</h1>
-      <p className="lede">Spin the Moon and pick one of NASA’s candidate regions near the south pole. Your orbiter will point its instrument there.</p>
-      <p className="historical"><strong>Historical dataset.</strong> These are the 13 regions NASA named in <a href={sources.nasa2022.url} target="_blank" rel="noreferrer">August 2022</a> as
+    <ScreenHeader eyebrow="LUNA‑01 · Observation target" title="Where should LUNA‑01 look?"
+      lede="Spin the Moon and pick one of NASA’s candidate regions near the south pole. Your orbiter will point its instrument there during the shadow pass."
+      aside={<p className="historical"><strong>Historical dataset.</strong> These are the 13 regions NASA named in <a href={sources.nasa2022.url} target="_blank" rel="noreferrer">August 2022</a> as
         candidate Artemis III landing regions. In <a href={sources.nasa2024.url} target="_blank" rel="noreferrer">October 2024</a> NASA narrowed its list to nine.
-        They are places studied for landing, not detected ice deposits.</p>
-    </header>
+        They are places studied for landing, not detected ice deposits.</p>}/>
 
     <div className="target-stage">
       <div className="target-globe">
@@ -115,12 +114,17 @@ export function TargetSelect({ game, save, callSign = '' }: { game: Game; save: 
         {shared && <div className="shared-choice" role="group" aria-label="Regions in this mapped area">
           {shared.regionIds.map(id => <button key={id} type="button" onClick={() => choose(id)}>{regionById(id)!.name}</button>)}
         </div>}
+        {selected?.id !== suggestion.id && <section className="recommend" aria-labelledby="recommend-title">
+          <p className="eyebrow" id="recommend-title">Recommended first target</p>
+          <p><strong>{suggestion.name}.</strong> {recommended.why}</p>
+          <button type="button" onClick={() => choose(suggestion.id)}>Look at {suggestion.name}</button>
+        </section>}
         <h2 className="target-list-title">13 candidate regions <small>({footprints.length} mapped areas on the globe)</small></h2>
         <ol className="region-list">{regions.map(region => <li key={region.id}>
           <button type="button" aria-pressed={region.id === selected?.id} onClick={() => choose(region.id)}>
             <strong>{region.name}</strong>
             <span>{placed(region) ? formatLatLon(footprintById(region.footprintId)!.center.value!) : 'Position not yet verified'}
-              {region.in2024List.value && <em> · on 2024 list</em>}</span>
+              {region.in2024List.value && <em> · on 2024 list</em>}{region.id === suggestion.id && <em> · recommended</em>}</span>
           </button>
         </li>)}</ol>
       </aside>
@@ -140,9 +144,12 @@ export function TargetSelect({ game, save, callSign = '' }: { game: Game; save: 
         <p>LUNA‑01 stays in orbit. Choosing this region means pointing its instrument here during the shadow pass, not landing.</p>
         <p className="fine">In this version the mission simulation uses one observation scenario for every region. Your choice is recorded,
           but it does not change power, data or score: modeling region-specific lighting and communication needs data we don’t have yet.</p>
-        <button className="primary" onClick={game.confirmTarget}>Set {selected.name} as target</button>
       </div>
       <ScienceBehind region={selected}/>
     </section>}
+    <ActionBar label="Target selection" status={selected ? <>Target: <strong>{selected.name}</strong></> : 'No target selected yet'}>
+      {selected ? <button type="button" className="primary" onClick={game.confirmTarget}>Set {selected.name} as target</button>
+        : <button type="button" className="primary" onClick={() => choose(suggestion.id)}>Start with {suggestion.name}</button>}
+    </ActionBar>
   </section>
 }

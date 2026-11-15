@@ -106,7 +106,8 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
         return
       }
       const root = engine.createRootUniverse(attempt, 'A', new Date().toISOString())
-      update({ phase: 'debrief', collection: { schemaVersion: 1, rootId: root.id, universes: [root] } })
+      // The result is saved at once; `playback` only keeps Mission Control on screen for the downlink beat.
+      update({ phase: 'debrief', collection: { schemaVersion: 1, rootId: root.id, universes: [root] } }, true)
     },
     finishPlayback() { store.setState({ playback: false }) },
     multiverse() {
@@ -117,7 +118,8 @@ export function createGame(engine?: MissionEngine, storage?: Storage) {
     branch(parentId: string, field: MutableField, to: string) {
       const save = current()
       const collection = save.collection
-      if (!engine || save.phase !== 'multiverse' || !collection || collection.universes.length >= 8) return
+      if (!engine || (save.phase !== 'multiverse' && save.phase !== 'debrief') || store.getState().playback ||
+        !collection || collection.universes.length >= 8) return
       const parent = collection.universes.find(item => item.id === parentId)
       if (!parent || !options[field].some(([id]) => id === to)) return
       const from = { ...parent.input.config, ...parent.input.decisions }[field]

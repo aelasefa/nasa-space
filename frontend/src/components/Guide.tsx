@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 import { glossary } from '../app/glossary'
 
 const steps = [
-  ['Design', 'Pick one option for each of the five parts. Keep the total within budget and mass, and choose the ice-sensitive spectrometer: finding water ice is the goal.'],
-  ['Compare', 'Save your design as a baseline, then change at least one part. Engineers always compare two options before committing.'],
-  ['Review', 'Pass four checkpoints: the right instrument, no broken limits, a recorded reason for your choice, and every warning accepted.'],
+  ['Target', 'Pick where the orbiter points its instrument. Every region runs the same simulation in this version.'],
+  ['Build', 'Pick one option for each part. Keep the total within budget and mass, and choose the ice-sensitive spectrometer: finding water ice is the goal.'],
+  ['Review', 'Compare your design with the starter, record why you chose it, accept the remaining warnings, then authorize launch.'],
   ['Fly', 'Make two calls in flight: how to use the battery in the Moon’s shadow, and what to send home first.'],
   ['Learn', 'Read the debrief to see what shaped the result, then replay the mission with one decision changed.'],
 ] as const

@@ -18,7 +18,7 @@ export function Briefing({ start }: { start: (callSign: string) => void }) {
         .from('.intro-transmission', { opacity: 0, y: 10, duration: 1.2 }, 0.1)
         .from('.intro-title', { opacity: 0, y: 24, duration: 1.3 }, 0.25)
         .from('.intro-hero h1, .intro-brief', { opacity: 0, y: 20, duration: 1.2, stagger: 0.1 }, 0.45)
-        .from('.intro-hero .lead, .intro-form', { opacity: 0, y: 16, duration: 1, stagger: 0.12 }, 0.75)
+        .from('.intro-hero .lead, .intro-outline, .intro-form', { opacity: 0, y: 16, duration: 1, stagger: 0.12 }, 0.75)
     }, hero)
     return () => ctx.revert()
   }, [])
@@ -44,6 +44,11 @@ export function Briefing({ start }: { start: (callSign: string) => void }) {
       Bring back enough evidence to see whether it holds up.</p>
     <ScienceLead>The signal sits on a crater floor that never sees the Sun. To check it, your orbiter has to keep
       observing while it crosses the Moon’s shadow, and then get that data home.</ScienceLead>
+    <ol className="intro-outline" aria-label="Your mission">
+      <li><span aria-hidden="true">01</span> Pick where the orbiter looks.</li>
+      <li><span aria-hidden="true">02</span> Build it within budget and launch mass.</li>
+      <li><span aria-hidden="true">03</span> Fly the shadow pass. In the dark you’ll have one call to make: keep the sensor running, or save the battery.</li>
+    </ol>
     <form className="intro-form" onSubmit={submit} noValidate>
       <label className="intro-callsign">
         <span>Call sign <small>(optional)</small></span>

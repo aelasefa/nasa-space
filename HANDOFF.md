@@ -6,6 +6,21 @@ steps” sections describe the original handoff snapshot. The expanded catalog a
 additional deterministic events are specified in [the v0.2 proposal](docs/ENGINE_V0_2_PROPOSAL.md)
 and await engine implementation. The v0.1 backend and its game rules were unchanged.
 
+**Update 2026-11-15 (mission hub, uncommitted):** the entry page is now a hub for three
+experiences: the Orbiter (solo and crew), the Lunar Rover (`rover/`, from Amanar) and the
+Training Academy (`academy/`, from AmanarII). Mission Control choices are compact cards with
+a collapsed “Show details” disclosure. See `docs/EXPERIENCES.md`.
+
+**Update 2026-11-15 (unified console pass, uncommitted):** the app compiles and all 34
+tests pass. Six builder steps (Structure, Science, Power, Propulsion, Comms, Protection;
+Solar and Battery merged into Power). The review is now its own screen
+(`features/Review.tsx`) with starter-vs-current charts (`components/TradeCharts.tsx`), and
+blockers link back to their step. Mission Control plays shadow-pass beats rebuilt from the
+E1 metrics (`app/flight.ts`). The debrief (`features/Debrief.tsx`) explains a one-change
+replay from both runs (`app/replay.ts`). Shared primitives live in `components/Screen.tsx`.
+Still engine-pending: v0.2 events and decision branches, and any target-specific effects.
+In this version the region is story-only. Sections below are the 2026-11-14 snapshot.
+
 Written 2026-11-14, mid-task. `main` at `9f6c8ed` is the last good, pushed state.
 **The working tree is uncommitted and does not compile right now** (see "Broken right now").
 General frontend notes (layout, commands, rules, code map) are in `frontend/HANDOFF.md`;
@@ -151,3 +166,12 @@ git clean -fd frontend/src/craft frontend/src/missions frontend/src/components/R
 - Target regions: `docs/TARGET_REGIONS.md`. Target choice has no simulation effect.
 - No `backdrop-filter` over WebGL canvases (it cost the builder ~118 fps once).
 - Commit on request only; the user has been committing straight to `main`.
+
+## Multiplayer (WIP note — 2026-11-15)
+
+Backend room registry + WebSocket `/mp` + 10 node:test cases green.
+Frontend: create/join/lobby, shared phases via bridge, voting panel, guest session
+reconnect key `luna01:mp:session:v1`. Solo preserved behind "Fly solo".
+CI workflow added. Docker build uses `npm run build` (includes multiplayer).
+Browser E2E with two contexts not yet automated — verify manually with two tabs.
+Multiverse after shared debrief remains local-only.

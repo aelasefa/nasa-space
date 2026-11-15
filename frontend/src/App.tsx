@@ -3,42 +3,86 @@ import gsap from 'gsap'
 import { useStore } from 'zustand'
 import type { Game } from './app/controller'
 import { Briefing } from './features/Briefing'
+import type { TradeStudyEvidence } from './app/contracts'
 import { Builder } from './features/Builder'
-import { Review } from './features/Design'
+import { Review } from './features/Review'
 import { RadioProvider, VoiceToggle } from './components/Radio'
-import { Debrief, Flight } from './features/Flight'
+import { Flight } from './features/Flight'
+import { Debrief } from './features/Debrief'
 import { TargetSelect } from './features/TargetSelect'
 import { Multiverse } from './features/Multiverse'
 import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
+import { MultiplayerSession } from './features/multiplayer/Session'
+import { loadMpSession } from './app/multiplayer/session'
+import { hashFor, modeFromHash, resolveMode, type Mode } from './app/experiences'
+import { HubLink } from './components/Experience'
+import { Hub } from './features/Hub'
 
 const phases = {
-  briefing: 'Briefing', target: 'Target', builder: 'Builder', reviews: 'Review',
+  briefing: 'Briefing', target: 'Target', builder: 'Build', reviews: 'Review',
   flight: 'Mission control', debrief: 'Debrief', multiverse: 'Multiverse',
 }
+const phaseOrder = Object.keys(phases)
 
 export function App({ game }: { game: Game }) {
   const { save, recovery, message, playback } = useStore(game.store)
   const [confirmReset, setConfirmReset] = useState(false)
   // The call sign lives in memory only; it is never written to the save.
   const [callSign, setCallSign] = useState('')
+  // The hub, the solo Orbiter and the crew Orbiter share this page. The hash remembers
+  // which one is open, so a reload or the browser's Back button lands where expected.
+  const resolve = useCallback(() => {
+    const { save: current, recovery: broken } = game.store.getState()
+    return resolveMode({ crew: Boolean(loadMpSession()), solo: Boolean(broken) || current.phase !== 'briefing' })
+  }, [game])
+  const [mode, setMode] = useState<Mode>(resolve)
+  const go = useCallback((next: Mode) => {
+    setMode(next)
+    if (modeFromHash() !== next) window.location.hash = hashFor(next)
+  }, [])
+  useEffect(() => {
+    const sync = () => setMode(resolve())
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [resolve])
   const [guide, setGuide] = useState(false)
+  // Builder position and trade-study reason survive trips to the review and back (session only).
+  const [builderStep, setBuilderStep] = useState(0)
+  const [rationale, setRationale] = useState<TradeStudyEvidence['rationale'] | ''>('')
+  const openStep = useCallback((step: number) => { setBuilderStep(step); game.builder() }, [game])
+  const settings = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && settings.current && !settings.current.contains(event.target)) settings.current.open = false
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && settings.current?.open) {
+        settings.current.open = false
+        settings.current.querySelector('summary')?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
+  }, [])
   const closeGuide = useCallback(() => setGuide(false), [])
   const content = useRef<HTMLElement>(null)
-  const leavingIntro = useRef(false)
-  useEffect(() => {
-    if (leavingIntro.current && save.phase === 'builder') {
-      content.current?.focus({ preventScroll: true })
-      if (window.scrollY > 0) window.scrollTo(0, 0)
-    } else {
-      content.current?.focus()
-    }
-    leavingIntro.current = save.phase === 'briefing'
-  }, [save.phase, playback])
   const root = save.collection?.universes[0]
   const phase = playback ? 'flight' : save.phase
-  const intro = phase === 'briefing' && !recovery
+  // A new screen starts at its top, with focus on the content. Stages inside one screen
+  // (the shadow pass, the downlink) manage their own focus and scrolling.
+  const shown = useRef('')
+  useEffect(() => {
+    const screen = `${mode}:${phase}`
+    if (shown.current === screen) return
+    const first = shown.current === ''
+    shown.current = screen
+    content.current?.focus({ preventScroll: true })
+    if (!first && window.scrollY > 0) window.scrollTo(0, 0)
+  }, [mode, phase])
+  const intro = mode === 'hub' || (phase === 'briefing' && !recovery)
   const shell = useRef<HTMLDivElement>(null)
   // Each phase arrives like a new transmission: content rises out of the starfield.
   useLayoutEffect(() => {
@@ -58,34 +102,51 @@ export function App({ game }: { game: Game }) {
     return () => ctx.revert()
   }, [intro])
   const backdrop = <SpaceBackdrop mode={intro ? 'intro' : phase === 'target' ? 'target' : 'app'}/>
+  if (mode === 'crew') return <MultiplayerSession onHub={() => go('hub')}/>
+  if (mode === 'hub') return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
+    <Hub soloPhase={save.phase === 'briefing' || recovery ? undefined : save.phase} crewCode={loadMpSession()?.roomCode}
+      onSolo={() => go('solo')} onCrew={() => go('crew')}/>
+  </main></>
   if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
+    <nav className="intro-nav" aria-label="Mission hub"><HubLink href={hashFor('hub')} onNavigate={() => go('hub')}/></nav>
     <Briefing start={name => { setCallSign(name); game.start() }}/>
   </main></>
   return <RadioProvider>{backdrop}<div className="shell" ref={shell}>
     <header className="topbar">
-      <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
-      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name]) =>
-        <li key={key} aria-current={phase === key ? 'step' : undefined}>{name}</li>)}</ol>
+      <div className="topbar-home"><HubLink href={hashFor('hub')} onNavigate={() => go('hub')}/>
+        <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div></div>
+      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) =>
+        <li key={key} aria-current={phase === key ? 'step' : undefined}
+          data-done={index < phaseOrder.indexOf(phase) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>)}</ol>
       <div className="topbar-actions">
-        <VoiceToggle/>
         <button className="quiet" onClick={() => setGuide(true)} aria-haspopup="dialog">How to play</button>
-        <button className="quiet" onClick={() => setConfirmReset(true)}>Reset session</button>
+        <details className="nav-settings" ref={settings}>
+          <summary>Settings</summary>
+          <div className="nav-settings-menu">
+            <VoiceToggle/>
+            <button className="quiet" onClick={() => {
+              if (settings.current) settings.current.open = false
+              setConfirmReset(true)
+            }}>Reset session</button>
+          </div>
+        </details>
       </div>
     </header>
     {guide && <Guide close={closeGuide}/>}
     <main ref={content} tabIndex={-1}>
       {confirmReset && <section className="panel notice" aria-label="Confirm session reset"><h2>Reset this session?</h2>
         <p>This clears the spacecraft draft and all saved universes.</p><div className="actions">
-          <button onClick={() => setConfirmReset(false)}>Cancel</button><button onClick={() => { game.reset(); setConfirmReset(false) }}>Clear session</button>
+          <button onClick={() => setConfirmReset(false)}>Cancel</button><button onClick={() => { game.reset(); setConfirmReset(false); setBuilderStep(0); setRationale('') }}>Clear session</button>
         </div></section>}
       {message && <p className="notice" role="status">{message}</p>}
       {recovery ? <section className="panel"><h1>Saved session needs attention</h1><p>{recovery}</p>
         <button className="primary" onClick={game.reset}>Reset saved session</button></section> : <>
         {save.phase === 'target' && <TargetSelect game={game} save={save} callSign={callSign}/>}
-        {save.phase === 'builder' && <Builder game={game} save={save}/>}
-        {save.phase === 'reviews' && <Review game={game} save={save}/>}
-        {save.phase === 'flight' && <Flight game={game} save={save} callSign={callSign}/>}
-        {save.phase === 'debrief' && root && <Debrief game={game} universe={root} callSign={callSign}/>}
+        {save.phase === 'builder' && <Builder game={game} save={save} step={builderStep} onStep={setBuilderStep}/>}
+        {save.phase === 'reviews' && <Review game={game} save={save} openStep={openStep} rationale={rationale} onRationale={setRationale}/>}
+        {phase === 'flight' && <Flight game={game} save={save} callSign={callSign} universe={playback ? root : undefined}/>}
+        {save.phase === 'debrief' && !playback && root && save.collection &&
+          <Debrief game={game} universe={root} collection={save.collection} targetId={save.targetId} callSign={callSign}/>}
         {save.phase === 'multiverse' && save.collection && <Multiverse game={game} collection={save.collection}/>}
       </>}
     </main>

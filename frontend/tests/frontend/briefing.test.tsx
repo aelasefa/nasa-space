@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { App } from '../../src/App'
@@ -8,14 +8,19 @@ import { saveKey } from '../../src/app/save'
 import { fixture } from './engine.fixture'
 
 afterEach(() => { cleanup(); localStorage.clear() })
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
+
 
 it('opens with a role and a question, and starts without a name', async () => {
   const user = userEvent.setup()
   const game = createGame(fixture, localStorage)
   render(<App game={game}/>)
+  flySolo()
   expect(screen.getByRole('heading', { name: 'You’re flight lead.' })).toBeTruthy()
   expect(screen.getByText(/possible ice signature/)).toBeTruthy()
   expect(screen.getByText('The Ice at the Edge of Shadow')).toBeTruthy()
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Back to mission hub' }))
   await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Call sign (optional)' }))
   await user.tab()
@@ -28,6 +33,7 @@ it.each(['typing', 'pasting'])('limits a call sign to 16 characters when %s, tri
   const user = userEvent.setup()
   const game = createGame(fixture, localStorage)
   render(<App game={game}/>)
+  flySolo()
   const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Call sign (optional)' })
   expect(input.maxLength).toBe(16)
   await user.click(input)
@@ -55,8 +61,17 @@ it.each(['typing', 'pasting'])('limits a call sign to 16 characters when %s, tri
 
 it('rejects an overlong call sign instead of starting', () => {
   render(<App game={createGame(fixture)}/>)
+  flySolo()
   fireEvent.change(screen.getByRole('textbox', { name: 'Call sign (optional)' }), { target: { value: '1234567890ABCDEFG' } })
   fireEvent.click(screen.getByRole('button', { name: 'Take the console' }))
   expect(screen.getByRole('alert').textContent).toContain('16')
   expect(screen.queryByRole('heading', { name: 'Spacecraft builder' })).toBeNull()
+})
+
+it('offers solo or multiplayer before the briefing', () => {
+  render(<App game={createGame(fixture)}/>)
+  expect(screen.getByRole('heading', { name: 'Amanar' })).toBeTruthy()
+  const ways = screen.getByRole('group', { name: 'Two ways to play the Orbiter mission' })
+  expect(within(ways).getByRole('button', { name: 'Fly solo' })).toBeTruthy()
+  expect(within(ways).getByRole('button', { name: 'Fly with a crew' })).toBeTruthy()
 })

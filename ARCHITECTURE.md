@@ -103,3 +103,7 @@ State invariants:
 
 ## Definition of architecture complete
 Type contracts compile; state transitions documented; no duplicate mission logic; all six screens have explicit input/output contracts; storage schema and version policy specified; branch rejection and review semantics unambiguous.
+
+## Multiplayer transport
+
+Guest rooms are authoritative on the backend over WebSocket `/mp` (same HTTP port). Frontend solo state (`luna01:save:v1`) stays isolated from guest session tokens (`luna01:mp:session:v1`). Details: `docs/MULTIPLAYER.md`.

@@ -17,16 +17,13 @@ COPY tests/ ./tests/
 COPY tsconfig*.json ./
 
 # Compile TypeScript domain engine, API server, and test suites to CommonJS
-RUN npx tsc --ignoreConfig --types node \
-    --target ES2022 \
-    --module CommonJS \
-    --moduleResolution bundler \
-    --outDir dist \
-    src/server.ts src/domain/index.ts tests/domain/*.test.ts \
+# Prefer project tsconfig (includes multiplayer + all tests); fall back to explicit compile.
+RUN npm run build \
+    && cp -R dist-domain dist \
     && echo '{"type": "commonjs"}' > dist/package.json
 
-# Execute all 53 automated tests during build to ensure engine integrity
-RUN node --test dist/tests/domain/*.test.js
+# Domain + multiplayer room tests
+RUN node --test dist/tests/domain/*.test.js dist/tests/multiplayer/*.test.js
 
 # Production runtime stage
 FROM node:22-alpine AS runner

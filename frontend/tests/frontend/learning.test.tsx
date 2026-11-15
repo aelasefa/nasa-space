@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
 import { App } from '../../src/App'
 import type { DownlinkAction, ObserveAction, SpacecraftConfig } from '../../src/app/contracts'
@@ -7,11 +7,13 @@ import { createGame } from '../../src/app/controller'
 import { engine } from '../../src/app/engine'
 
 afterEach(cleanup)
-const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
+const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }))
 
 function reachBuilder() {
   const game = createGame(engine)
   render(<App game={game}/>)
+  flySolo()
   click('Take the console')
   fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Set Malapert Massif as target' }))
@@ -36,31 +38,33 @@ function fly(config: Partial<SpacecraftConfig>, observe: ObserveAction, downlink
   game.launch()
   expect(game.store.getState().save.phase).toBe('flight')
   game.observe(observe)
-  if (downlink) game.downlink(downlink)
+  if (downlink) {
+    game.downlink(downlink)
+    game.finishPlayback()
+  }
   render(<App game={game}/>)
   return game
 }
 const lead = () => screen.getByText((_, el) => el?.classList.contains('debrief-headline') ?? false).textContent
+const replayResult = () => document.querySelector('.replay-result')!.textContent
 
 it('teaches the builder through the shadow power tradeoff, with engine numbers', () => {
   const game = reachBuilder()
-  click('Science')
+  click(/^Science/)
   fireEvent.click(screen.getByRole('radio', { name: 'Ice-sensitive spectrometer' }))
-  click('Battery')
-  const tradeoff = screen.getByRole('group', { name: 'Power system' })
+  click('Power')
+  const light = document.getElementById('powerId-solar_light-details')!
   expect(game.store.getState().save.config.payloadId).toBe('ice_spectrometer')
   // 80 Wh battery vs 60 Wh keep-alive + 85 W × 2 h = 230 Wh needed; engine says 56% of the survey.
-  expect(within(tradeoff).getAllByText('80 Wh')).toHaveLength(1)
-  expect(within(tradeoff).getAllByText('230 Wh')).toHaveLength(2)
-  expect(within(tradeoff).getByText('56%')).toBeTruthy()
+  expect(light.textContent).toContain('80 Wh')
+  expect(light.textContent).toContain('full pass needs 230 Wh')
+  expect(light.textContent).toContain('56% survey coverage')
+  expect(light.textContent).toMatch(/Shadow endurance\s*14 min/)
+  const storage = document.getElementById('powerId-solar_storage-details')!.textContent
+  expect(storage).toContain('400 Wh')
+  expect(storage).toMatch(/Shadow endurance\s*2 h/)
   fireEvent.click(screen.getByRole('radio', { name: 'Solar + storage' }))
-  click('Review design')
-  fireEvent.change(screen.getByLabelText('Reason for choosing the current design'), { target: { value: 'science' } })
-  click('Record decision')
-  expect(screen.getByText('Decision recorded: Scientific return.')).toBeTruthy()
-  click('Open engineering review')
-  const gate = screen.getByText('CML3 · Trade study').closest('li')!
-  expect(within(gate).getByText('Passed')).toBeTruthy()
+  expect(game.store.getState().save.config.powerId).toBe('solar_storage')
 })
 
 it('explains jargon inline and in the how-to-play guide', () => {
@@ -103,6 +107,20 @@ it('battery cutoff: the sensor shuts off and the replay suggests a bigger batter
   const first = screen.getByText('First difference').closest('p')!.textContent
   expect(first).toContain('Shadow pass')
   expect(first).toMatch(/Sensor cut off in Universe A → On plan in Universe B/)
+  // The bigger battery records everything, but the basic link caps what gets home.
+  expect(replayResult()).toContain('+4 points')
+  expect(replayResult()).toMatch(/raised recorded science from 56 to 100 points, but the link can only send 60, so Earth gained 4/)
+  expect(replayResult()).toMatch(/Remaining bottleneck.*basic antenna/)
+  expect(screen.getByRole('button', { name: 'Replay with the high-throughput antenna' }).className).toContain('primary')
+})
+
+it('a replay that misses the bottleneck says so', () => {
+  const game = fly({ powerId: 'solar_light', commsId: 'comms_high' }, 'observe_full', 'science_first')
+  const [a] = game.store.getState().save.collection!.universes
+  act(() => { game.branch(a.id, 'commsId', 'comms_basic') })
+  expect(replayResult()).toContain('±0 points')
+  expect(replayResult()).toMatch(/didn’t touch what was limiting the run/)
+  expect(replayResult()).toMatch(/Remaining bottleneck.*battery/i)
 })
 
 it('limited downlink: the link is the bottleneck and one replay gets everything home', () => {

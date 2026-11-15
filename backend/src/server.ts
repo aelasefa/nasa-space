@@ -24,8 +24,12 @@ import type {
   UniverseChange,
   UniverseCollection,
 } from './domain/types';
+import { RoomRegistry, attachWebSocket, isWebSocketUpgrade, PROTOCOL_VERSION } from './multiplayer';
+
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
+const rooms = new RoomRegistry();
+setInterval(() => rooms.cleanup(), 5_000).unref();
 
 function sendJson(res: http.ServerResponse, statusCode: number, data: unknown): void {
   const json = JSON.stringify(data, null, 2);
@@ -91,7 +95,9 @@ const server = http.createServer(async (req, res) => {
           'POST /api/branch',
           'POST /api/compare',
           'GET  /api/matrix',
+          'WS   /mp',
         ],
+        multiplayer: { protocolVersion: PROTOCOL_VERSION, transport: 'websocket', persistence: 'memory', instances: 'single' },
       });
       return;
     }
@@ -200,6 +206,31 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.on('upgrade', (req, socket, head) => {
+  const url = new URL(req.url || '/', 'http://localhost');
+  if (url.pathname !== '/mp' || !isWebSocketUpgrade(req)) {
+    socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  try {
+    const ws = attachWebSocket(req, socket, head);
+    const ip = req.socket.remoteAddress || 'unknown';
+    const session = rooms.attach({
+      send: (message) => ws.send(JSON.stringify(message)),
+      close: (code, reason) => ws.close(code, reason),
+    }, ip);
+    ws.onMessage((text) => {
+      try { session.handle(JSON.parse(text)); }
+      catch { session.handle({ type: '__bad__' }); }
+    });
+    ws.onClose(() => session.disconnect());
+  } catch {
+    socket.destroy();
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[LUNA-01 Backend] Server listening on http://0.0.0.0:${PORT}`);
+  console.log(`[LUNA-01 Backend] Multiplayer WebSocket at ws://0.0.0.0:${PORT}/mp`);
 });
