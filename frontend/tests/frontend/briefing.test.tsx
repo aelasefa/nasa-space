@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { App } from '../../src/App'
@@ -19,6 +19,8 @@ it('opens with a role and a question, and starts without a name', async () => {
   expect(screen.getByRole('heading', { name: 'You’re flight lead.' })).toBeTruthy()
   expect(screen.getByText(/possible ice signature/)).toBeTruthy()
   expect(screen.getByText('The Ice at the Edge of Shadow')).toBeTruthy()
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Back to mission hub' }))
   await user.tab()
   expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Call sign (optional)' }))
   await user.tab()
@@ -68,7 +70,8 @@ it('rejects an overlong call sign instead of starting', () => {
 
 it('offers solo or multiplayer before the briefing', () => {
   render(<App game={createGame(fixture)}/>)
-  expect(screen.getByRole('heading', { name: 'How do you want to fly?' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Fly solo' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Create or join mission' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Amanar' })).toBeTruthy()
+  const ways = screen.getByRole('group', { name: 'Two ways to play the Orbiter mission' })
+  expect(within(ways).getByRole('button', { name: 'Fly solo' })).toBeTruthy()
+  expect(within(ways).getByRole('button', { name: 'Fly with a crew' })).toBeTruthy()
 })

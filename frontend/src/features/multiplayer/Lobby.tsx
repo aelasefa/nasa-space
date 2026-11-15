@@ -7,12 +7,12 @@ import { ActionBar, OptionCard, ScreenHeader } from '../../components/Screen'
 export function Lobby({
   client,
   nickname,
-  onSolo,
+  onHub,
   onLeave,
 }: {
   client: MultiplayerClient
   nickname: string
-  onSolo: () => void
+  onHub: () => void
   onLeave: () => void
 }) {
   const [, tick] = useState(0)
@@ -39,7 +39,7 @@ export function Lobby({
           : 'Opening a guest session with Mission Control.')}/>
       <ActionBar label="Connection">
         <button type="button" onClick={onLeave}>Cancel</button>
-        <button type="button" className="quiet" onClick={onSolo}>Fly solo instead</button>
+        <button type="button" className="quiet" onClick={onHub}>Back to mission hub</button>
       </ActionBar>
     </section>
   }

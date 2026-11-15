@@ -1,8 +1,11 @@
-# AGENTS.md: rules for working on LUNA-01
+# AGENTS.md: rules for working on Amanar and its LUNA-01 mission
 
 LUNA-01 is an educational game: the player plans and flies a robotic orbiter that looks
 for water ice at the Moon's south pole. It is one continuous console, from briefing to
-multiverse. Your job is to extend it **as one product**: same look, same voice, same
+multiverse. The product is called **Amanar**: its mission hub (the entry page) launches
+the LUNA-01 mission and two companion experiences, the Lunar Rover and the Training
+Academy (see `docs/EXPERIENCES.md`). Use “Amanar” for the product and “LUNA-01” only for
+the orbiter mission. Save keys keep their `luna01:` prefix so existing saves still load. Your job is to extend it **as one product**: same look, same voice, same
 sources of truth. Do not rebuild, restyle or re-invent what exists.
 
 If anything here conflicts with the code, the code is right. Fix this file in the same
@@ -66,9 +69,11 @@ Data flows one way: **engine → app → features → components**.
 | Screens | `features/*.tsx` | One file per phase: Briefing, TargetSelect, Builder, Review, Flight, Debrief, Multiverse. |
 | Shared UI | `components/*.tsx` | Reusable pieces used by more than one screen. |
 | 3D | `space/` (decorative backdrop), `target/` (NASA Moon globe), `craft/` (stylized spacecraft) | Lazy-loaded. Never required for the game to work. |
+| Hub | `features/Hub.tsx`, `app/experiences.ts`, `components/Experience.tsx` | The entry screen, routes (`#/hub`, `#/solo`, `#/crew`) and the shared “Back to mission hub” link. |
+| Companion pages | `rover/` + `src/rover/`, `academy/` + `src/academy/` | Separate HTML entry points. Imported runtimes live in `runtime/` (plain JS with `.d.ts` types). They never import the engine and keep their own saves. |
 
 Phase order: `briefing → target → builder → reviews → flight → debrief → multiverse`
-(`App.tsx` picks the screen from `save.phase`).
+(`App.tsx` picks the screen from `save.phase`, after the hub route).
 
 The mission is data. Steps, parts, crew and the config-to-3D mapping come from a
 `MissionDefinition`. Do not hardcode step counts, lunar parts or LUNA-01 rules into
@@ -85,6 +90,7 @@ second version of something that exists is the main way this UI gets ruined.
 | Bottom action row | `ActionBar` in `components/Screen.tsx` |
 | A number with label and unit | `Readout` in `components/Screen.tsx` |
 | A selectable part or choice | `OptionCard` in `components/Screen.tsx` (real radio input) |
+| Modal panel (guides, achievements, optional tools) | `Dialog` in `components/Dialog.tsx` |
 | Crew dialogue | `Transmission` in `components/Radio.tsx`, with a character from `mission.crew` (Reyes, Dr. Chen, Amina). Do not add new characters or a second dialogue style. |
 | Jargon explanation | `Term` in `components/Term.tsx` + an entry in `app/glossary.ts` |
 | Engine findings, metrics, timeline, causes | `components/MissionData.tsx` |
@@ -148,8 +154,10 @@ npm run build
 `npm run lint` must report no errors; the existing warnings are known.
 
 Then check the change in a browser (`npm run dev`), at desktop width and at 390px, with
-the keyboard, and with no console errors. Play the whole path once: briefing → target →
-build → review → Mission Control → debrief → replay.
+the keyboard, and with no console errors. Play the whole path once: hub → briefing → target →
+build → review → Mission Control → debrief → replay. If you touched the hub, Rover or
+Academy, open `rover/` and `academy/` too (`npm run build && npm run preview` for the
+production paths).
 
 Report honestly: what works, what is presentation-only, what needs the backend, and
 what you did not test. Do not claim something is done because it compiles.

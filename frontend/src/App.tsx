@@ -15,7 +15,10 @@ import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
 import { MultiplayerSession } from './features/multiplayer/Session'
-import { codeFromLocation, loadMpSession } from './app/multiplayer/session'
+import { loadMpSession } from './app/multiplayer/session'
+import { hashFor, modeFromHash, resolveMode, type Mode } from './app/experiences'
+import { HubLink } from './components/Experience'
+import { Hub } from './features/Hub'
 
 const phases = {
   briefing: 'Briefing', target: 'Target', builder: 'Build', reviews: 'Review',
@@ -28,8 +31,22 @@ export function App({ game }: { game: Game }) {
   const [confirmReset, setConfirmReset] = useState(false)
   // The call sign lives in memory only; it is never written to the save.
   const [callSign, setCallSign] = useState('')
-  const [mode, setMode] = useState<'choose' | 'solo' | 'multi'>(() =>
-    (loadMpSession() || codeFromLocation()) ? 'multi' : 'choose')
+  // The hub, the solo Orbiter and the crew Orbiter share this page. The hash remembers
+  // which one is open, so a reload or the browser's Back button lands where expected.
+  const resolve = useCallback(() => {
+    const { save: current, recovery: broken } = game.store.getState()
+    return resolveMode({ crew: Boolean(loadMpSession()), solo: Boolean(broken) || current.phase !== 'briefing' })
+  }, [game])
+  const [mode, setMode] = useState<Mode>(resolve)
+  const go = useCallback((next: Mode) => {
+    setMode(next)
+    if (modeFromHash() !== next) window.location.hash = hashFor(next)
+  }, [])
+  useEffect(() => {
+    const sync = () => setMode(resolve())
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [resolve])
   const [guide, setGuide] = useState(false)
   // Builder position and trade-study reason survive trips to the review and back (session only).
   const [builderStep, setBuilderStep] = useState(0)
@@ -52,19 +69,20 @@ export function App({ game }: { game: Game }) {
   }, [])
   const closeGuide = useCallback(() => setGuide(false), [])
   const content = useRef<HTMLElement>(null)
-  const leavingIntro = useRef(false)
-  useEffect(() => {
-    if (leavingIntro.current && save.phase === 'builder') {
-      content.current?.focus({ preventScroll: true })
-      if (window.scrollY > 0) window.scrollTo(0, 0)
-    } else {
-      content.current?.focus()
-    }
-    leavingIntro.current = save.phase === 'briefing'
-  }, [save.phase, playback])
   const root = save.collection?.universes[0]
   const phase = playback ? 'flight' : save.phase
-  const intro = phase === 'briefing' && !recovery
+  // A new screen starts at its top, with focus on the content. Stages inside one screen
+  // (the shadow pass, the downlink) manage their own focus and scrolling.
+  const shown = useRef('')
+  useEffect(() => {
+    const screen = `${mode}:${phase}`
+    if (shown.current === screen) return
+    const first = shown.current === ''
+    shown.current = screen
+    content.current?.focus({ preventScroll: true })
+    if (!first && window.scrollY > 0) window.scrollTo(0, 0)
+  }, [mode, phase])
+  const intro = mode === 'hub' || (phase === 'briefing' && !recovery)
   const shell = useRef<HTMLDivElement>(null)
   // Each phase arrives like a new transmission: content rises out of the starfield.
   useLayoutEffect(() => {
@@ -84,21 +102,19 @@ export function App({ game }: { game: Game }) {
     return () => ctx.revert()
   }, [intro])
   const backdrop = <SpaceBackdrop mode={intro ? 'intro' : phase === 'target' ? 'target' : 'app'}/>
-  if (mode === 'multi') return <MultiplayerSession onSolo={() => setMode('solo')}/>
+  if (mode === 'crew') return <MultiplayerSession onHub={() => go('hub')}/>
+  if (mode === 'hub') return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
+    <Hub soloPhase={save.phase === 'briefing' || recovery ? undefined : save.phase} crewCode={loadMpSession()?.roomCode}
+      onSolo={() => go('solo')} onCrew={() => go('crew')}/>
+  </main></>
   if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
-    {mode === 'choose' ? <section className="panel mp-home" style={{ margin: '0 auto' }}>
-      <p className="intro-transmission"><span className="builder-signal" aria-hidden="true"/>Mission 01 · Incoming assignment</p>
-      <h1>How do you want to fly?</h1>
-      <p className="lede">Solo keeps your local draft. Create or join a guest mission to share one orbiter with a crew of 2–4.</p>
-      <div className="actions">
-        <button type="button" className="primary" onClick={() => setMode('solo')}>Fly solo</button>
-        <button type="button" onClick={() => setMode('multi')}>Create or join mission</button>
-      </div>
-    </section> : <Briefing start={name => { setCallSign(name); game.start() }}/>}
+    <nav className="intro-nav" aria-label="Mission hub"><HubLink href={hashFor('hub')} onNavigate={() => go('hub')}/></nav>
+    <Briefing start={name => { setCallSign(name); game.start() }}/>
   </main></>
   return <RadioProvider>{backdrop}<div className="shell" ref={shell}>
     <header className="topbar">
-      <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
+      <div className="topbar-home"><HubLink href={hashFor('hub')} onNavigate={() => go('hub')}/>
+        <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div></div>
       <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) =>
         <li key={key} aria-current={phase === key ? 'step' : undefined}
           data-done={index < phaseOrder.indexOf(phase) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>)}</ol>

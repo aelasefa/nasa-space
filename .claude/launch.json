@@ -4,8 +4,23 @@
     {
       "name": "luna-dev",
       "runtimeExecutable": "/Users/gaythtourham/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
-      "runtimeArgs": ["frontend/node_modules/vite/bin/vite.js", "frontend", "--port", "5174", "--strictPort"],
+      "runtimeArgs": [
+        "frontend/node_modules/vite/bin/vite.js",
+        "frontend",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
       "port": 5174
+    },
+    {
+      "name": "deck-studio",
+      "runtimeExecutable": "/Users/gaythtourham/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-gaythtourham--claude-spares-spare-JpyPrc/53a70e03-5f5c-413c-b677-f4c076164fa5/scratchpad/studio-server.cjs",
+        "/Users/gaythtourham/Documents/ChatGPT/Nasa Hackathon/Mamatou/nasa-space/frontend/node_modules/three"
+      ],
+      "port": 8097
     }
   ]
 }

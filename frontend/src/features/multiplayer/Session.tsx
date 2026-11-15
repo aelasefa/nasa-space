@@ -5,6 +5,7 @@ import { MultiplayerClient } from '../../app/multiplayer/client'
 import { clearMpSession, codeFromLocation, loadMpSession, saveMpSession } from '../../app/multiplayer/session'
 import { canEditField, roleLabels, type Role } from '../../../../backend/src/multiplayer/permissions'
 import type { ConfigField } from '../../app/contracts'
+import { HubLink } from '../../components/Experience'
 import { Guide } from '../../components/Guide'
 import { RadioProvider, VoiceToggle } from '../../components/Radio'
 import { SpaceBackdrop } from '../../space/SpaceBackdrop'
@@ -46,12 +47,14 @@ function CrewStrip({ client }: { client: MultiplayerClient }) {
   </aside>
 }
 
-export function MultiplayerSession({ onSolo }: { onSolo: () => void }) {
+export function MultiplayerSession({ onHub }: { onHub: () => void }) {
   const client = useMemo(() => new MultiplayerClient(), [])
   const game = useMemo(() => createMultiplayerGame(client), [client])
   const { save, message, playback } = useStore(game.store)
   const [, tick] = useState(0)
   useEffect(() => client.subscribe(() => tick(n => n + 1)), [client])
+  // Going back to the hub keeps the guest session on this device; only the socket closes.
+  useEffect(() => () => client.disconnect(false), [client])
 
   const [nickname, setNickname] = useState(() => loadMpSession()?.nickname ?? '')
   const [entered, setEntered] = useState(false)
@@ -88,7 +91,7 @@ export function MultiplayerSession({ onSolo }: { onSolo: () => void }) {
     client.disconnect(true)
     setEntered(false)
     setConfirmLeave(false)
-    if (window.location.hash.startsWith('#/join/')) history.replaceState(null, '', window.location.pathname)
+    if (window.location.hash.startsWith('#/join/')) history.replaceState(null, '', `${window.location.pathname}#/crew`)
   }
 
   useEffect(() => {
@@ -113,7 +116,7 @@ export function MultiplayerSession({ onSolo }: { onSolo: () => void }) {
     return <>
       <SpaceBackdrop mode="intro"/>
       <main className="intro" tabIndex={-1}>
-        <MultiplayerHome initialCode={inviteCode} onSolo={onSolo} onEnter={enter} error={client.lastError}/>
+        <MultiplayerHome initialCode={inviteCode} onHub={onHub} onEnter={enter} error={client.lastError}/>
       </main>
     </>
   }
@@ -122,7 +125,7 @@ export function MultiplayerSession({ onSolo }: { onSolo: () => void }) {
     return <>
       <SpaceBackdrop mode="app"/>
       <main className="shell" tabIndex={-1} style={{ padding: '1.25rem' }}>
-        <Lobby client={client} nickname={nickname} onSolo={() => { leave(); onSolo() }} onLeave={leave}/>
+        <Lobby client={client} nickname={nickname} onHub={() => { leave(); onHub() }} onLeave={leave}/>
       </main>
     </>
   }
@@ -131,7 +134,8 @@ export function MultiplayerSession({ onSolo }: { onSolo: () => void }) {
     <SpaceBackdrop mode={phase === 'target' ? 'target' : 'app'}/>
     <div className="shell">
       <header className="topbar">
-        <div className="wordmark"><span aria-hidden>◒</span> LUNA–01 · Crew {room.code}</div>
+        <div className="topbar-home"><HubLink href="#/hub" onNavigate={onHub}/>
+          <div className="wordmark"><span aria-hidden>◒</span> LUNA–01 · Crew {room.code}</div></div>
         <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) =>
           <li key={key} aria-current={phase === key ? 'step' : undefined}
             data-done={index < phaseOrder.indexOf(phase) || undefined}>{name}</li>)}</ol>

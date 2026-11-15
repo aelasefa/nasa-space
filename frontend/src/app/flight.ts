@@ -1,6 +1,6 @@
-import type { ResolvedEvent, SpacecraftConfig } from './contracts'
+import type { DownlinkAction, ObserveAction, ResolvedEvent, SpacecraftConfig } from './contracts'
 import { label } from './options'
-import { points, shadowEnergy } from './story'
+import { points, shadowBeats, shadowEnergy } from './story'
 
 /*
  * Mission Control playback. Every value here is read from, or rebuilt exactly from, the
@@ -119,4 +119,52 @@ export function downlinkLine(config: SpacecraftConfig, action: string, recorded:
   if (returned < recorded) return `${who}Earth has ${points(returned)} of ${points(recorded)} points. The rest is still on board: ${action === 'health_first'
     ? 'the health report took part of the link' : `the ${part('commsId', config)} was the bottleneck`}.`
   return `${who}Earth has all ${points(returned)} points. Let’s see what they show.`
+}
+
+/*
+ * Event choices. The compact card shows one sentence and the engine's numbers for that
+ * choice; the longer reading and the model assumptions sit behind "Show details".
+ * These are words only. Every number shown next to them is read from the engine.
+ */
+
+/** The main trade-off of each flight choice, in one sentence. True for every design: what it costs this design is in the engine numbers beside it. */
+export const tradeoffs: Record<ObserveAction | DownlinkAction, string> = {
+  observe_full: 'Keep the sensor on across the dark crater floor, paid for with battery.',
+  conserve: 'Pause the sensor in the dark: the battery is protected, but the crater floor goes unobserved.',
+  science_first: 'Use the whole link for science data.',
+  health_first: 'Share the link with a spacecraft health report, leaving science a smaller share.',
+}
+
+/** What the game model assumes for each event (GAME_RULES.md, events E1 and E2). */
+export const assumptions = {
+  observe: [
+    'The first half of the survey is recorded in sunlight before the pass. The shadow pass adds the other half.',
+    'The battery keeps the spacecraft alive first. The instrument runs on what is left.',
+    'Battery, power draw and science points are illustrative game values, not flight data.',
+  ],
+  downlink: [
+    'There is one downlink window. What does not fit stays on the orbiter.',
+    'Health first leaves a smaller share of the link for science. That split is a gameplay trade-off, not a radio model.',
+    'The model does not track what the health report is worth, so its only modeled effects are less science and a lower operations score.',
+  ],
+} as const
+
+/** The longer reading of a shadow-pass choice, from the engine's E1 preview for that choice. */
+export function observeDetail(config: SpacecraftConfig, event: ResolvedEvent, hours: number) {
+  const beats = shadowBeats(event, hours).beats
+  const text = (id: string) => beats.find(beat => beat.id === id)!.text
+  return config.payloadId === 'ice_spectrometer' ? `${text('draw')} ${text('science')}`
+    : `${text('draw')} The mapping camera can’t detect ice, so no ice points are recorded either way.`
+}
+
+/** The longer reading of a downlink choice, from the engine's E2 preview. */
+export function downlinkDetail(action: DownlinkAction, recorded: number, sent: number, capacity: number | undefined) {
+  const fits = sent >= recorded
+  const link = capacity === undefined ? '' : `With this choice the link can carry ${points(capacity)} science points this pass. `
+  const result = recorded === 0 ? 'There is no ice data on board to send.'
+    : fits ? `All ${points(recorded)} recorded points fit.`
+    : `${points(recorded - sent)} of the ${points(recorded)} recorded points stay on the orbiter.`
+  return action === 'health_first'
+    ? `${link}${result} Training comparison: the health report takes part of the link, and this model does not score what it tells the team.`
+    : `${link}${result}`
 }

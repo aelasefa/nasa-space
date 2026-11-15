@@ -25,15 +25,19 @@ it('parses invite hashes case-insensitively', () => {
 })
 
 it('opens join form when an invite code is present', () => {
-  render(<MultiplayerHome initialCode="AB12CD" onSolo={() => {}} onEnter={() => {}}/>)
+  render(<MultiplayerHome initialCode="AB12CD" onHub={() => {}} onEnter={() => {}}/>)
   expect(screen.getByRole('heading', { name: 'Join a mission' })).toBeTruthy()
   expect(screen.getByRole('textbox', { name: 'Room code' })).toHaveProperty('value', 'AB12CD')
 })
 
-it('create-or-join from the intro does not touch the solo save', () => {
+it('flying with a crew from the hub does not touch the solo save, and leads back to the hub', () => {
   const game = createGame(fixture, localStorage)
   render(<App game={game}/>)
-  fireEvent.click(screen.getByRole('button', { name: 'Create or join mission' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Fly with a crew' }))
   expect(localStorage.getItem('luna01:save:v1')).toBeNull()
-  expect(screen.getByRole('heading', { name: 'How do you want to fly?' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Fly with a crew' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Create mission' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Join mission' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Back to mission hub' }))
+  expect(screen.getByRole('heading', { name: 'Amanar' })).toBeTruthy()
 })

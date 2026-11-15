@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react'
 import type { Game } from '../app/controller'
-import type { DownlinkAction, ObserveAction, Universe } from '../app/contracts'
+import type { DownlinkAction, ObserveAction, ResolvedEvent, Universe } from '../app/contracts'
 import { scenario } from '../app/engine'
-import { clock, downlinkBriefing, downlinkLine, shadowBriefing, shadowLine, shadowTimeline, type ShadowFrame } from '../app/flight'
+import { assumptions, clock, downlinkBriefing, downlinkDetail, downlinkLine, observeDetail, shadowBriefing, shadowLine, shadowTimeline, tradeoffs, type ShadowFrame } from '../app/flight'
 import { label, options } from '../app/options'
 import { regionById } from '../app/regions'
 import type { Save } from '../app/save'
@@ -39,6 +39,40 @@ function BeatCard({ beat, headingRef, children }: { beat: Beat; headingRef?: Ref
   </article>
 }
 
+function EventMetrics({ event }: { event: ResolvedEvent }) {
+  return <dl className="metrics">{Object.entries(event.metrics).map(([name, value]) => {
+    const [text, format] = metricLabels[name] ?? [name, number]
+    return <div key={name}><dt>{text}</dt><dd>{format(value)}</dd></div>
+  })}</dl>
+}
+
+/**
+ * One event choice. Compact by default: the trade-off in a sentence, the numbers needed
+ * to decide, and the button that commits. "Show details" opens in place and is a plain
+ * disclosure: opening or closing it never selects or commits anything.
+ */
+function ChoiceCard({ id, name, telemetry, onCommit, children }: {
+  id: ObserveAction | DownlinkAction; name: string; telemetry: ReactNode; onCommit: () => void; children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return <div className="choice-card" id={`choice-${id}`} role="group" aria-label={name}>
+    <p className="choice-tradeoff" id={`choice-${id}-tradeoff`}>{tradeoffs[id]}</p>
+    {telemetry}
+    <button type="button" className="commit" onClick={onCommit} aria-describedby={`choice-${id}-tradeoff`}>{name}</button>
+    <details className="choice-details" onToggle={event => setOpen(event.currentTarget.open)}>
+      <summary>{open ? 'Hide details' : 'Show details'}<span className="sr-only"> for {name}</span></summary>
+      <div className="choice-details-body">{children}</div>
+    </details>
+  </div>
+}
+
+function Assumptions({ items }: { items: readonly string[] }) {
+  return <>
+    <h4>Model assumptions</h4>
+    <ul className="choice-notes">{items.map(item => <li key={item}>{item}</li>)}</ul>
+  </>
+}
+
 export function Flight({ game, save, callSign, universe }: { game: Game; save: Save; callSign?: string; universe?: Universe }) {
   const engine = game.engine!
   const { config } = save
@@ -69,7 +103,8 @@ export function Flight({ game, save, callSign, universe }: { game: Game; save: S
   useEffect(() => {
     if (stage === 'decide') return
     heading.current?.focus({ preventScroll: true })
-    if (stage !== 'shadow') heading.current?.scrollIntoView?.({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'auto' })
+    // Once per stage, not per beat: the new heading must be on screen after a choice is committed.
+    heading.current?.scrollIntoView?.({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'auto' })
   }, [stage])
 
   const observe = (action: ObserveAction) => {
@@ -86,7 +121,8 @@ export function Flight({ game, save, callSign, universe }: { game: Game; save: S
   })) : []
   const downlinkPreviews = save.observation ? options.downlinkAction.map(([id, name]) => {
     const result = run(save.observation!, id)
-    return { id, name, sent: result ? points(result.returnedSciencePoints) : null, capacity: result ? eventById(result, 'E2')?.metrics.scienceDownlinkCapacity : undefined }
+    const e2 = result ? eventById(result, 'E2') : undefined
+    return { id, name, sent: result ? points(result.returnedSciencePoints) : null, capacity: e2?.metrics.scienceDownlinkCapacity, event: e2 }
   }) : []
   const sunlight: Beat = { id: 'sunlight', cue: 'sunlight', title: 'Downlink window: what do we send first?', from: crew.reyes,
     line: downlinkBriefing(config, recorded, downlinkPreviews[0]?.capacity) }
@@ -94,7 +130,9 @@ export function Flight({ game, save, callSign, universe }: { game: Game; save: S
     tone: universe.result.returnedSciencePoints < universe.result.collectedSciencePoints ? 'warn' : 'good',
     line: downlinkLine(config, universe.input.decisions.downlinkAction, universe.result.collectedSciencePoints, universe.result.returnedSciencePoints, callSign) } : null
   const current = stage === 'decide' ? decide : stage === 'shadow' ? shadowBeats.at(-1)! : stage === 'sunlight' ? sunlight : downlinked!
-  const log = [...shadowBeats, ...(universe ? [sunlight] : [])].filter(item => item.id !== current.id)
+  const lead: Beat | null = event && (stage === 'sunlight' || stage === 'downlinked') ? { id: 'lead', cue: 'sunlight', title: 'Science lead on the pass',
+    from: crew.chen, line: shadowLeadLine(event.status) } : null
+  const log = [...shadowBeats, ...(lead ? [lead] : []), ...(universe ? [sunlight] : [])].filter(item => item.id !== current.id)
 
   const inShadow = stage === 'shadow' && frame?.id !== 'egress'
   const battery = frame?.batteryWh ?? capacity
@@ -110,62 +148,70 @@ export function Flight({ game, save, callSign, universe }: { game: Game; save: S
     <p className="arrival" role="status"><span aria-hidden="true">✓</span> {arrival.line}</p>
 
     <div className="mc-grid">
+      <dl className="readouts shadow-hud mc-hud" aria-label="Shadow pass telemetry">
+        <Readout label="Battery remaining" value={number(Math.round(battery))} unit={`/ ${number(capacity)} Wh`}
+          tone={battery / Math.max(1, capacity) < 0.2 ? 'bad' : undefined}
+          hint={<span className="hud-bar" aria-hidden="true"><span style={{ width: `${Math.max(0, battery / Math.max(1, capacity)) * 100}%` }}/></span>}/>
+        <Readout label="Time left in shadow" value={timeLeft > 0 ? clock(timeLeft) : '0 min'} hint={!event ? `${hours} h pass ahead` : timeLeft > 0 ? 'Running on battery' : 'Back in sunlight'}/>
+        <Readout label="Ice science on board" value={frame ? points(frame.science) : event ? points(recorded) : '—'} unit="/ 100 pts"
+          hint={universe ? `${points(universe.result.returnedSciencePoints)} received on Earth` : undefined}/>
+      </dl>
+
+      <div className="panel mc-decision" aria-live="polite">
+        <BeatCard beat={current} headingRef={heading}>
+          {stage === 'decide' && <>
+            <p className="fine choices-hint">Pick one. The choice is final for this flight.</p>
+            <div className="choices-flight">{options.observeAction.map(([id, name]) => {
+              const preview = run(id, 'science_first')
+              const outcome = engine.resolveObservation(config, id).event
+              const end = shadowTimeline(outcome, hours, preview?.collectedSciencePoints ?? 0)?.at(-1)
+              return <ChoiceCard key={id} id={id} name={name} onCommit={() => observe(id)} telemetry={
+                <dl className="choice-telemetry">
+                  <div><dt>Ice points on board</dt><dd>{preview ? points(preview.collectedSciencePoints) : '—'}<small> / 100</small></dd></div>
+                  <div><dt>Battery after the pass</dt><dd>{end ? number(Math.round(end.batteryWh)) : '—'}<small> Wh</small></dd></div>
+                </dl>}>
+                <p>{observeDetail(config, outcome, hours)}</p>
+                <h4>Engine preview: {statusLabel(outcome.status).toLowerCase()}</h4>
+                <EventMetrics event={outcome}/>
+                <Assumptions items={assumptions.observe}/>
+              </ChoiceCard>
+            })}</div>
+          </>}
+          {stage === 'shadow' && <button type="button" className="quiet" onClick={() => setShown(Number.POSITIVE_INFINITY)}>Skip to result</button>}
+          {stage === 'sunlight' && event && <>
+            <p className="pass-headline" data-tone={frames?.at(-1)?.tone}><strong>Shadow pass: {statusLabel(event.status)}.</strong> {points(recorded)} of 100 ice points on board.</p>
+            <p className="fine choices-hint">Pick one. The choice is final for this flight.</p>
+            <div className="choices-flight">{downlinkPreviews.map(preview => <ChoiceCard key={preview.id} id={preview.id} name={preview.name}
+              onCommit={() => game.downlink(preview.id)} telemetry={preview.sent !== null && <>
+                <p className="choice-sends"><strong>Sends {preview.sent} of {points(recorded)}</strong> recorded points to Earth.</p>
+                <div className="energy-bar" aria-hidden="true"><span style={{ width: `${recorded ? (preview.sent / recorded) * 100 : 0}%` }}/></div>
+              </>}>
+              {preview.sent !== null && <p>{downlinkDetail(preview.id, recorded, preview.sent, preview.capacity)}</p>}
+              {preview.event && <>
+                <h4>Engine preview: {statusLabel(preview.event.status).toLowerCase()}</h4>
+                <EventMetrics event={preview.event}/>
+              </>}
+              <Assumptions items={assumptions.downlink}/>
+            </ChoiceCard>)}</div>
+          </>}
+        </BeatCard>
+        {log.length > 0 && <details className="flight-log" open={stage === 'shadow' || stage === 'downlinked'}><summary>Flight log</summary>
+          <ol className="beats">{log.map(item => <li key={item.id} data-tone={item.tone}><strong>{item.title}</strong><p>{item.line}</p></li>)}</ol>
+        </details>}
+      </div>
+
       <div className="panel mc-status" data-shadow={inShadow || undefined} data-cue={current.cue}>
         <div className="mc-orbit"><Orbit active/><span className="mc-shadow" aria-hidden="true"/></div>
         <CraftView design={luna01.design(config)} label="LUNA-01 in flight"
           effects={{ shadow: inShadow, scanning: stage === 'shadow' && Boolean(frame?.scanning), downlink: stage === 'downlinked' }}/>
-        <dl className="readouts shadow-hud" aria-label="Shadow pass telemetry">
-          <Readout label="Battery remaining" value={number(Math.round(battery))} unit={`/ ${number(capacity)} Wh`}
-            tone={battery / Math.max(1, capacity) < 0.2 ? 'bad' : undefined}
-            hint={<span className="hud-bar" aria-hidden="true"><span style={{ width: `${Math.max(0, battery / Math.max(1, capacity)) * 100}%` }}/></span>}/>
-          <Readout label="Time left in shadow" value={timeLeft > 0 ? clock(timeLeft) : '0 min'} hint={!event ? `${hours} h pass ahead` : timeLeft > 0 ? 'Running on battery' : 'Back in sunlight'}/>
-          <Readout label="Ice science on board" value={frame ? points(frame.science) : event ? points(recorded) : '—'} unit="/ 100 pts"
-            hint={universe ? `${points(universe.result.returnedSciencePoints)} received on Earth` : undefined}/>
-        </dl>
         {(stage === 'sunlight' || stage === 'downlinked') && <EvidenceMap title={universe ? 'Recorded vs. received' : 'Recorded on the orbiter'}
           recorded={recorded} received={universe ? universe.result.returnedSciencePoints : null}/>}
         <p className="fine">Playback of the engine’s result. Values at each beat follow its shadow-pass energy model.</p>
       </div>
-
-      <div className="panel mc-decision" aria-live="polite">
-        <BeatCard beat={current} headingRef={heading}>
-          {stage === 'decide' && <div className="choices-flight">{options.observeAction.map(([id, name]) => {
-            const preview = run(id, 'science_first')
-            const end = shadowTimeline(engine.resolveObservation(config, id).event, hours, preview?.collectedSciencePoints ?? 0)?.at(-1)
-            return <div className="choice-card" key={id}>
-              <button type="button" onClick={() => observe(id)} aria-describedby={`choice-${id}`}>{name}</button>
-              <p id={`choice-${id}`}>{id === 'observe_full' ? 'Keep the sensor reading across the crater floor.' : 'Pause the sensor in the dark to protect the battery.'}
-                {preview && <> <strong>{points(preview.collectedSciencePoints)} ice points on board</strong>{end ? `, ${number(Math.round(end.batteryWh))} Wh left` : ''}.</>}</p>
-            </div>
-          })}</div>}
-          {stage === 'shadow' && <button type="button" className="quiet" onClick={() => setShown(Number.POSITIVE_INFINITY)}>Skip to result</button>}
-          {stage === 'sunlight' && event && <>
-            <p className="pass-headline" data-tone={frames?.at(-1)?.tone}><strong>Shadow pass: {statusLabel(event.status)}.</strong> {points(recorded)} of 100 ice points on board.</p>
-            <Transmission from={crew.chen}>{shadowLeadLine(event.status)}</Transmission>
-            <div className="choices-flight">{downlinkPreviews.map(preview => <div className="choice-card" key={preview.id}>
-              <button type="button" onClick={() => game.downlink(preview.id)} aria-describedby={`choice-${preview.id}`}>{preview.name}</button>
-              <div id={`choice-${preview.id}`}>
-                {preview.sent !== null && <>
-                  <p className="choice-sends"><strong>Sends {preview.sent} of {points(recorded)}</strong> recorded points to Earth.</p>
-                  <div className="energy-bar" aria-hidden="true"><span style={{ width: `${recorded ? (preview.sent / recorded) * 100 : 0}%` }}/></div>
-                </>}
-                <p>{preview.id === 'science_first' ? 'The whole link carries science data.'
-                  : 'Part of the link carries spacecraft diagnostics instead. Training comparison: this model doesn’t track what diagnostics are worth, so the only modeled effect is less science and a lower operations score.'}</p>
-              </div>
-            </div>)}</div>
-          </>}
-        </BeatCard>
-        {log.length > 0 && <details className="flight-log" open={stage !== 'decide'}><summary>Flight log</summary>
-          <ol className="beats">{log.map(item => <li key={item.id} data-tone={item.tone}><strong>{item.title}</strong><p>{item.line}</p></li>)}</ol>
-        </details>}
-      </div>
     </div>
 
     {event && stage !== 'shadow' && <details className="panel mc-telemetry"><summary>Detailed telemetry</summary>
-      <dl className="metrics">{Object.entries(event.metrics).map(([name, value]) => {
-        const [text, format] = metricLabels[name] ?? [name, number]
-        return <div key={name}><dt>{text}</dt><dd>{format(value)}</dd></div>
-      })}</dl>
+      <EventMetrics event={event}/>
       <h3><Term id="margin">Spacecraft resources</Term></h3>
       <ResourceMetrics report={resources}/>
     </details>}

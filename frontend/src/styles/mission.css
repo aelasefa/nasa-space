@@ -776,3 +776,321 @@ html { scroll-padding-top: 92px; }
 .crew-strip .crew-list { margin: 0; }
 .mp-home .actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 .mp-home h1 { margin: .35rem 0 .5rem; font-size: clamp(1.6rem, 4vw, 2.2rem); }
+
+/* ─────────────────────────── Mission hub and shared navigation ─────────────────────────── */
+/* Links that launch something look like the buttons beside them. */
+.button {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 2.6rem;
+  border: 1px solid #465969; border-radius: 5px; background: #182432; color: inherit;
+  padding: .64rem .95rem; font-weight: 650; text-decoration: none; text-align: center;
+}
+.button:hover { border-color: var(--accent); }
+.button:has(:focus-visible) { outline: 2px solid #c1f3e9; outline-offset: 4px; }
+.button.primary { background: var(--accent); border-color: var(--accent); color: #0c2425; }
+.button.quiet { background: transparent; }
+label.button { cursor: pointer; }
+
+/* "Back to mission hub": the first control of every top bar */
+.hub-link {
+  display: inline-flex; align-items: center; gap: .45rem; min-height: 2.6rem; padding: 0 .55rem 0 .35rem; border-radius: 5px;
+  color: var(--accent); font: 600 .74rem ui-monospace, "SF Mono", monospace; letter-spacing: .08em; text-transform: uppercase;
+  text-decoration: none; white-space: nowrap;
+}
+.hub-link:hover { background: #b0e3d914; }
+.hub-link > span[aria-hidden] { font-size: 1.15rem; line-height: 1; }
+.topbar-home { display: flex; flex: none; align-items: center; gap: .35rem .9rem; min-width: 0; }
+/* In the console bar the link reads "‹ Mission hub"; its accessible name stays in full. */
+.topbar .hub-link-back { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.topbar .progress { flex: 1 1 auto; justify-content: center; min-width: 0; margin: 0; gap: .4rem .9rem; }
+.topbar-actions { flex: none; flex-wrap: nowrap; }
+@media (max-width: 1180px) { .topbar .wordmark { display: none; } }
+@media (max-width: 780px) { .topbar .progress { justify-content: flex-start; } .topbar-actions { flex-wrap: wrap; } }
+.intro-nav { position: absolute; top: .75rem; left: clamp(.9rem, 5.2vw, 4.4rem); z-index: 2; }
+@media (max-width: 1100px) {
+  /* Still announced in full; only the visible label shortens. */
+  .hub-link-back { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+.hub { box-sizing: border-box; width: min(100%, 74rem); margin: 0 auto; padding-block: clamp(2.5rem, 9svh, 6rem) 2rem; }
+.hub h1 { margin-bottom: .6rem; font-size: clamp(2.3rem, 5.4vw, 4rem); }
+.hub .lede { color: #dbe5ea; }
+.hub-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.hub-card { display: flex; flex-direction: column; }
+.hub-card .eyebrow { margin-bottom: .45rem; }
+.hub-card h2 { margin-bottom: .55rem; font-size: 1.5rem; }
+.hub-card > p:not(.eyebrow, .fine) { color: #dbe5ea; margin-bottom: 1.2rem; }
+/* Launch actions line up along the bottom of the row, whatever the text above them. */
+.hub-card > .button, .hub-ways { margin-top: auto; }
+.hub-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.hub-way { display: grid; gap: .45rem; align-content: start; }
+.hub-way button { width: 100%; min-height: 2.6rem; }
+.hub-way .fine { margin: 0; font-size: .8rem; line-height: 1.45; }
+.hub-note { margin: 1rem 0 0; padding-top: .7rem; border-top: 1px solid var(--line); font-size: .8rem; }
+@media (max-width: 960px) {
+  .hub-grid { grid-template-columns: minmax(0, 1fr); }
+  .hub-card > .button, .hub-ways { margin-top: 0; }
+}
+@media (max-width: 420px) { .hub-ways { grid-template-columns: minmax(0, 1fr); } }
+
+/* ─────────────────────────── Mission control: event choices ─────────────────────────── */
+/* Telemetry first, then the decision, then the pictures. On a phone that is also the reading order. */
+.mc-grid { grid-template-areas: "hud decision" "visual decision"; grid-template-rows: auto 1fr; }
+.mc-hud { grid-area: hud; margin: 0; grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); }
+.mc-decision { grid-area: decision; }
+.mc-status { grid-area: visual; }
+@media (max-width: 780px) {
+  .mc-grid { grid-template-areas: "hud" "decision" "visual"; grid-template-rows: none; }
+}
+
+.choices-hint { margin: 1rem 0 0; }
+.choices-flight { align-items: start; margin-top: .5rem; }
+.choice-card { min-width: 0; gap: .65rem; padding: .85rem .9rem; border: 1px solid #405161; border-radius: 8px; background: #0b1420a6; }
+.choice-card .choice-tradeoff { color: #dbe5ea; font-size: .92rem; line-height: 1.45; }
+.choice-telemetry { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin: 0; }
+.choice-telemetry dt, .choice-details-body h4 {
+  font: 600 .66rem ui-monospace, "SF Mono", monospace; text-transform: uppercase; letter-spacing: .09em; color: var(--caption);
+}
+.choice-telemetry dd { margin-top: .2rem; font: 600 1.05rem ui-monospace, monospace; }
+.choice-telemetry dd small { color: var(--muted); font-size: .72rem; }
+.choice-card .choice-sends, .choice-card .energy-bar { margin-bottom: 0; }
+/* The one control that commits. Nothing else in the card looks like it. */
+.choice-card .commit { min-height: 2.75rem; border-color: var(--accent); background: #1c3a41; color: #fff; }
+.choice-card .commit::after { content: "→"; margin-left: .5rem; color: var(--accent); }
+.choice-card .commit:hover:not(:disabled) { background: #24494f; }
+.choice-details { min-width: 0; border-top: 1px solid var(--line); }
+.choice-details > summary {
+  display: flex; align-items: center; gap: .45rem; width: fit-content; min-height: 2.75rem;
+  list-style: none; color: var(--accent); cursor: pointer; font-size: .85rem;
+}
+.choice-details > summary::-webkit-details-marker { display: none; }
+.choice-details > summary::before { content: "▸"; font-size: .8em; }
+.choice-details[open] > summary::before { content: "▾"; }
+.choice-details > summary:hover { color: #d9fff7; }
+.choice-details-body { display: grid; gap: .6rem; min-width: 0; padding-bottom: .2rem; overflow-wrap: anywhere; }
+.choice-details-body h4 { margin: .35rem 0 0; }
+.choice-details-body .metrics { grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; }
+.choice-details-body .metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .35rem 0; }
+.choice-details-body .metrics dt { font-size: .82rem; }
+.choice-details-body .metrics dd { flex: none; font-size: .88rem; }
+.choice-notes { display: grid; gap: .3rem; margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: .85rem; line-height: 1.45; }
+
+/* ─────────────────────────── Experience pages: Lunar Rover and Training Academy ─────────────────────────── */
+/* Each is its own document. They share the console's tokens and this top bar; everything
+   else below is namespaced (.rover-*, .academy-*) so it cannot leak into the Orbiter. */
+.xp-bar {
+  position: relative; z-index: 6; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem;
+  min-height: 3.5rem; padding: .35rem clamp(10px, 3vw, 32px); border-bottom: 1px solid #3d5263; background: #03060cf2;
+}
+.xp-name { display: flex; align-items: baseline; gap: .7rem; margin: 0; color: #e7edf0; }
+.xp-brand { font-size: .82rem; }
+.xp-name strong { font-size: .95rem; font-weight: 700; }
+@media (max-width: 560px) { .xp-brand { display: none; } }
+.xp-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-left: auto; }
+@media (max-width: 560px) { .xp-bar-actions { width: 100%; margin-left: 0; } }
+
+/* Lunar Rover: the view fills the screen; everything else floats at its edges. */
+.rover-app { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100vh; height: 100svh; overflow: hidden; background: #000206; }
+.rover-stage { position: relative; min-height: 0; padding: 0; overflow: hidden; }
+.rover-view { position: absolute; inset: 0; }
+.rover-view canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.rover-view canvas:active { cursor: grabbing; }
+.rover-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; }
+.rover-toolbar { display: flex; flex-wrap: wrap; gap: .4rem; }
+.rover-toolbar button { min-height: 2.5rem; padding: .4rem .7rem; font-size: .85rem; }
+.rover-toolbar button[aria-pressed="true"] { border-color: #5b7f86; }
+
+/* Driving HUD: five readouts, readable at a glance, clear of the middle of the view */
+.rover-hud { position: absolute; z-index: 2; top: .6rem; left: .6rem; right: .6rem; display: grid; justify-items: start; gap: .35rem; pointer-events: none; }
+.rover-readouts { grid-template-columns: repeat(5, minmax(0, 8.6rem)); gap: .35rem; margin: 0; }
+.rover-readouts .readout { padding: .4rem .55rem; background: #03060cd1; }
+.rover-readouts .readout dd { margin-top: .15rem; font-size: 1.05rem; }
+.rover-readouts .readout .readout-hint { font-size: .74rem; }
+.rover-bearing { display: inline-block; color: var(--gold); font-weight: 700; }
+.rover-more { pointer-events: auto; max-width: min(100%, 21rem); padding: 0 .6rem; border: 1px solid var(--line); border-radius: 6px; background: #03060cd1; }
+.rover-more > summary { display: flex; align-items: center; min-height: 2.2rem; color: var(--accent); cursor: pointer; font-size: .8rem; }
+.rover-more-list { margin: 0 0 .5rem; }
+.rover-more-list > div { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; border-top: 1px solid var(--line); }
+.rover-more-list dt { font-size: .8rem; }
+.rover-more-list dd { font-size: .85rem; text-align: right; }
+.rover-more .fine { margin: 0 0 .5rem; font-size: .75rem; }
+
+.rover-notice, .rover-hint {
+  position: absolute; z-index: 2; left: 50%; transform: translateX(-50%); box-sizing: border-box; width: max-content; max-width: min(92%, 36rem);
+  margin: 0; padding: .4rem .75rem; border-radius: 6px; background: #03060cd9; color: #e7edf0; font-size: .85rem; line-height: 1.4;
+  text-align: center; pointer-events: none;
+}
+.rover-notice { bottom: 4.6rem; border: 1px solid var(--line); }
+.rover-notice:empty { display: none; }
+.rover-hint { bottom: 7.4rem; color: var(--accent); }
+
+/* Bottom edge: hold-to-drive pad on the left, commands on the right */
+.rover-deck {
+  position: absolute; z-index: 3; left: .6rem; right: .6rem; bottom: calc(.6rem + env(safe-area-inset-bottom));
+  display: flex; align-items: flex-end; justify-content: space-between; gap: .6rem; pointer-events: none;
+}
+.rover-deck > * { pointer-events: auto; }
+.rover-pad { display: none; grid-template: ". fwd ." 3.1rem "left brake right" 3.1rem ". rev ." 3.1rem / 3.1rem 3.1rem 3.1rem; gap: .25rem; }
+.rover-pad[data-on] { display: grid; }
+@media (pointer: coarse), (max-width: 720px) { .rover-pad { display: grid; } }
+.rover-pad-button { padding: 0; background: #0b1420e0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.rover-pad-button:active { border-color: var(--accent); background: #1c3a41; }
+.rover-pad-button[data-control="fwd"] { grid-area: fwd; }
+.rover-pad-button[data-control="rev"] { grid-area: rev; }
+.rover-pad-button[data-control="left"] { grid-area: left; }
+.rover-pad-button[data-control="right"] { grid-area: right; }
+.rover-pad-button[data-control="brake"] { grid-area: brake; color: var(--bad); font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; }
+.rover-commands { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; gap: .4rem; margin-left: auto; }
+.rover-commands > button, .rover-menu > summary { box-sizing: border-box; min-height: 2.75rem; padding: .5rem .8rem; background: #0b1420e0; font-size: .88rem; }
+.rover-commands button[aria-pressed="true"] { border-color: var(--accent); background: #1c3a41; color: var(--accent); }
+.rover-menu > summary { display: flex; align-items: center; }
+.rover-menu .nav-settings-menu { top: auto; bottom: calc(100% + .5rem); }
+.rover-menu .nav-settings-menu button { min-height: 2.5rem; }
+@media (max-width: 720px) {
+  .rover-readouts { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .rover-readouts .readout dd { font-size: .95rem; }
+  .rover-commands { flex-direction: column; align-items: stretch; width: 9.6rem; }
+  .rover-commands > button, .rover-menu > summary { justify-content: center; text-align: center; }
+  .rover-notice { bottom: 13.2rem; }
+  .rover-hint { bottom: 15.8rem; }
+}
+
+/* Control guide (dialog and no-WebGL fallback) */
+.rover-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0 1.5rem; margin-bottom: .8rem; }
+.rover-guide h3 { margin-top: 1rem; }
+.rover-keys { margin: 0; }
+.rover-keys > div { display: grid; grid-template-columns: 6.2rem minmax(0, 1fr); gap: .6rem; padding: .4rem 0; border-top: 1px solid var(--line); }
+.rover-keys dt { color: var(--accent); font: 600 .8rem ui-monospace, monospace; }
+.rover-keys dd { color: var(--muted); font: 400 .88rem/1.45 "Instrument Sans", "Inter", system-ui, sans-serif; }
+.rover-app-fallback { height: auto; min-height: 100svh; overflow: visible; background: none; }
+.rover-fallback { box-sizing: border-box; width: min(100%, 54rem); min-height: 0; margin: 0 auto; padding: 1.5rem clamp(16px, 4vw, 32px) 3rem; }
+.rover-fallback h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+.rover-fallback h2 { margin-top: 1.6rem; }
+
+/* Training Academy: chapters → lesson and simulator → quiz → result */
+.academy-shell > main { min-height: 70svh; }
+.academy-progress { min-width: 13rem; }
+.academy-progress .eyebrow { margin-bottom: .3rem; }
+.academy-progress-count { margin: 0 0 .4rem; color: #e7edf0; }
+.academy-progress .fine { margin: .45rem 0 0; }
+.academy-chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.academy-chapter { display: flex; flex-direction: column; gap: .15rem; }
+.academy-chapter .eyebrow { margin: 0; }
+.academy-chapter h2 { margin: .6rem 0 .4rem; }
+.academy-chapter > .fine { margin-bottom: 1rem; }
+.academy-chapter > .button { align-self: flex-start; margin-top: auto; }
+.academy-chapter[data-next] { border-color: #85bfb4; box-shadow: inset 0 1px 0 #ffffff0d, 0 0 0 1px #85bfb466, 0 20px 50px -30px #000; }
+.academy-chapter[data-next] .eyebrow { color: var(--accent); }
+.academy-chapter[data-locked] h2 { color: #c5d3da; }
+.academy-locked { margin: auto 0 0; padding: .6rem .75rem; border-left: 2px solid var(--gold); border-radius: 0 6px 6px 0; background: #f4d78a0d; color: #dbe5ea; font-size: .88rem; line-height: 1.45; }
+.academy-locked + .button { align-self: flex-start; margin-top: .6rem; }
+.academy-rover { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; }
+.academy-rover h2 { margin-bottom: .3rem; }
+.academy-rover p { margin: 0; max-width: 60ch; }
+
+.academy-crumbs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1.5rem; margin: -.5rem 0 1rem; }
+.academy-crumbs .hub-link { margin-left: -.35rem; }
+.academy-crumbs .stages { margin: 0; }
+.academy-lesson { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 1rem; align-items: start; }
+.academy-lesson-text { color: #dbe5ea; font-size: 1.02rem; line-height: 1.65; }
+@media (max-width: 900px) { .academy-lesson { grid-template-columns: minmax(0, 1fr); } }
+.action-bar-buttons > .button { min-height: 0; }
+@media (max-width: 560px) { .action-bar-buttons > .button { flex: 1 1 0; } }
+
+/* Quiz */
+.academy-quiz-bar { margin: -.4rem 0 1rem; }
+.academy-question { max-width: 54rem; }
+.academy-question h2 { font-size: clamp(1.15rem, 2.4vw, 1.45rem); line-height: 1.35; letter-spacing: -.01em; }
+.academy-options { display: grid; gap: .55rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.academy-options button {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .75rem; width: 100%; min-height: 3rem; padding: .7rem .9rem;
+  border-color: #405161; background: #0b1420a6; font-weight: 500; line-height: 1.45; text-align: left;
+}
+.academy-options button > span:nth-child(2) { flex: 1 1 12rem; }
+.academy-letter { color: var(--accent); font: 700 .85rem ui-monospace, monospace; }
+/* Answered options stay fully readable: state is a border, a mark and words, not opacity. */
+.academy-options button:disabled { opacity: 1; cursor: default; }
+.academy-options button[data-state="other"] { color: var(--muted); }
+.academy-options button[data-state="correct"] { border-color: var(--accent); background: #1c3a41; }
+.academy-options button[data-state="wrong"] { border-color: var(--bad); background: #3b262980; }
+.academy-mark { font: 600 .74rem ui-monospace, monospace; letter-spacing: .04em; text-transform: uppercase; }
+[data-state="correct"] .academy-mark { color: var(--accent); }
+[data-state="wrong"] .academy-mark { color: var(--bad); }
+.academy-feedback { margin-top: 1rem; padding: .8rem .95rem; border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; background: #b0e3d90d; }
+.academy-feedback[data-tone="bad"] { border-left-color: var(--bad); background: #ffc2bc0d; }
+.academy-feedback p { margin: 0; color: #dbe5ea; }
+.academy-feedback p + p { margin-top: .35rem; }
+.academy-feedback strong { color: #fff; }
+
+/* Result and achievements */
+.academy-result { max-width: 54rem; }
+.academy-result .readouts { max-width: 34rem; margin: 1.1rem 0; }
+.academy-earned { margin: .2rem 0 .5rem; padding-left: 1.1rem; }
+.academy-result .takeaway .link-action { margin: 0; }
+.academy-achievements { display: grid; gap: 0; margin: 0 0 1rem; padding: 0; list-style: none; }
+.academy-achievements li { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); gap: .8rem; align-items: start; padding: .65rem 0; border-top: 1px solid var(--line); }
+.academy-achievements .tag { text-align: center; }
+.academy-achievements .tag:not([data-passed]) { background: #2a2f36; color: #c5ccd3; }
+.academy-achievements p { margin: .15rem 0 0; font-size: .88rem; }
+.academy-achievements li:not([data-earned]) strong { color: #c5d3da; }
+.academy-confetti { position: fixed; inset: 0; z-index: 50; width: 100vw; height: 100vh; pointer-events: none; }
+
+/* The imported simulators draw their own controls inside .academy-sim (see academy/runtime). */
+.academy-sim { min-width: 0; margin-top: .6rem; }
+.academy-sim .sim-wrapper { display: grid; gap: .9rem; min-width: 0; }
+.academy-sim .sim-hud-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; }
+.academy-sim :is(.sim-title, .card-label, .pad-title, .chk-title, .rating-title, .analysis-header, .calc-header, .hud-label) {
+  color: var(--caption); font: 600 .68rem ui-monospace, "SF Mono", monospace; letter-spacing: .09em; text-transform: uppercase;
+}
+.academy-sim :is(.analysis-header, .calc-header) { margin-bottom: .8rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); color: #e7edf0; }
+.academy-sim .neon-dot { display: inline-block; width: .4rem; height: .4rem; margin-right: .45em; border-radius: 50%; background: var(--accent); vertical-align: .12em; }
+.academy-sim .sim-preset-buttons { display: flex; flex-wrap: wrap; gap: .4rem; }
+.academy-sim button { font-size: .82rem; }
+.academy-sim :is(.hud-pill-btn, .sub-btn, .thruster-btn) { min-height: 2.5rem; padding: .45rem .75rem; background: #0b1420a6; border-color: #405161; }
+.academy-sim :is(.hud-pill-btn, .sub-btn).active { border-color: var(--accent); background: #1c3a41; color: var(--accent); }
+.academy-sim .sub-btn { text-align: left; font-weight: 500; }
+.academy-sim .sim-canvas-viewport { position: relative; width: 100%; min-width: 0; }
+.academy-sim .sim-canvas { display: block; width: 100%; height: 360px; border: 1px solid var(--line); border-radius: 8px; background: #03060c; }
+/* Readings sit under the picture, not on top of it. */
+.academy-sim .sim-overlay-hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: .4rem; margin-top: .5rem; }
+.academy-sim .hud-stat-box { display: grid; gap: .2rem; min-width: 0; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: #0a121c99; }
+.academy-sim .hud-val { color: #e7edf0; font: 600 .9rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.academy-sim :is(.sim-controls-panel, .subsystem-card, .hud-analysis-box, .deorbit-calc-box, .passivation-checklist, .docking-controls-bar, .mission-rating-box) {
+  min-width: 0; padding: .8rem .9rem; border: 1px solid var(--line); border-radius: 8px; background: #0b1420a6;
+}
+.academy-sim .control-row { margin-bottom: .8rem; }
+.academy-sim .control-label { display: block; margin-bottom: .35rem; color: var(--muted); font-size: .85rem; }
+.academy-sim .hud-range { width: 100%; min-height: 1.75rem; margin: 0; accent-color: #9fdbce; }
+.academy-sim :is(.sim-intel-text, .rating-desc, .cw-warning, .passivate-status) { color: var(--muted); font-size: .88rem; line-height: 1.5; }
+.academy-sim .sim-intel-text { padding-top: .6rem; border-top: 1px solid var(--line); }
+.academy-sim .sim-intel-text strong { color: #e7edf0; }
+.academy-sim :is(.subsystem-grid, .kessler-split-grid, .docking-controls-bar) { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: .9rem; }
+.academy-sim .subsystem-col { display: grid; gap: .7rem; align-content: start; min-width: 0; }
+.academy-sim .card-label { margin-bottom: .55rem; }
+.academy-sim .option-button-group { display: grid; gap: .35rem; }
+.academy-sim .metric-row { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .3rem 0; font-size: .85rem; }
+.academy-sim .m-title { color: var(--muted); }
+.academy-sim .m-val { font: 600 .88rem ui-monospace, monospace; text-align: right; }
+.academy-sim .mission-rating-box { margin-top: .8rem; }
+.academy-sim .rating-status { margin: .25rem 0; font-weight: 700; }
+.academy-sim .thruster-pad, .academy-sim .docking-action-box { display: grid; gap: .5rem; align-content: start; }
+.academy-sim .pad-buttons { display: grid; justify-items: center; gap: .35rem; }
+.academy-sim .pad-h-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .35rem; }
+.academy-sim .btn-hard-lock { width: 100%; min-height: 3rem; border-style: dashed; }
+.academy-sim .btn-hard-lock:not(:disabled) { border-style: solid; border-color: var(--accent); background: #1c3a41; color: var(--accent); }
+.academy-sim .btn-hard-lock.locked-success { background: var(--accent); color: #0c2425; }
+.academy-sim .cw-warning { padding-left: .6rem; border-left: 2px solid var(--gold); }
+.academy-sim .chk-title { margin-bottom: .5rem; color: var(--gold); }
+.academy-sim .chk-item { display: flex; gap: .5rem; align-items: baseline; margin-bottom: .45rem; color: var(--muted); font-size: .88rem; }
+.academy-sim .btn-execute-passivation { width: 100%; margin-top: .4rem; }
+.academy-sim .mt-2 { margin-top: .7rem; }
+.academy-sim .text-cyan, .academy-sim .text-green { color: var(--accent) !important; }
+.academy-sim .text-gold { color: var(--gold) !important; }
+.academy-sim .text-coral { color: var(--bad) !important; }
+.academy-sim .text-muted { color: var(--muted) !important; }
+@media (max-width: 700px) {
+  .academy-sim :is(.subsystem-grid, .kessler-split-grid, .docking-controls-bar) { grid-template-columns: minmax(0, 1fr); }
+  .academy-sim .sim-canvas { height: 300px; }
+}
+
+/* The crew entry sits where the hub does, not against the top edge. */
+.intro > .mp-home { margin: clamp(2.5rem, 9svh, 6rem) auto 2rem; }

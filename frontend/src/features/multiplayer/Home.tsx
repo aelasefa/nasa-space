@@ -6,12 +6,12 @@ export type MpEntry = { mode: 'create' | 'join'; nickname: string; code?: string
 /** Create or join a guest mission — no accounts. */
 export function MultiplayerHome({
   initialCode,
-  onSolo,
+  onHub,
   onEnter,
   error,
 }: {
   initialCode?: string | null
-  onSolo: () => void
+  onHub: () => void
   onEnter: (entry: MpEntry) => void
   error?: string | null
 }) {
@@ -35,12 +35,12 @@ export function MultiplayerHome({
 
   if (mode === 'pick') {
     return <section className="panel mp-home">
-      <ScreenHeader eyebrow="LUNA‑01 · Crew" title="How do you want to fly?"
-        lede="Solo keeps your local draft. Create or join a guest mission to share one orbiter with a crew of 2–4."/>
+      <ScreenHeader eyebrow="LUNA‑01 Orbiter · Guest mission" title="Fly with a crew"
+        lede="Share one orbiter with 2–4 guests. Start a mission and send the invite, or join with a room code."/>
       <div className="actions">
-        <button type="button" className="primary" onClick={onSolo}>Fly solo</button>
-        <button type="button" onClick={() => setMode('create')}>Create mission</button>
+        <button type="button" className="primary" onClick={() => setMode('create')}>Create mission</button>
         <button type="button" onClick={() => setMode('join')}>Join mission</button>
+        <button type="button" className="quiet" onClick={onHub}>Back to mission hub</button>
       </div>
     </section>
   }

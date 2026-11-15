@@ -1,7 +1,12 @@
-# LUNA-01
+# Amanar
 
-Educational lunar south-pole orbiter mission game. All mission numbers are
+Educational lunar south-pole exploration game. Its main mission, LUNA-01, is an
+orbiter mission game. All mission numbers are
 illustrative, not NASA/GMAT-validated data.
+
+The entry page, the Amanar mission hub, launches three experiences: the LUNA-01 Orbiter (solo or
+with a crew), the Lunar Rover (`/rover/`) and the Training Academy (`/academy/`).
+Details and sources: `docs/EXPERIENCES.md`.
 
 | Folder | What it holds | Commands (run inside the folder) |
 |---|---|---|
@@ -18,7 +23,7 @@ Product and engineering specs live at the root: `PRODUCT.md`, `ARCHITECTURE.md`,
 
 ## Multiplayer (guest co-op)
 
-No accounts. Create or join a mission from the intro screen. The backend serves
+No accounts. Choose “Fly with a crew” on the hub to create or join a mission. The backend serves
 WebSocket rooms at `ws://localhost:3000/mp` (in-memory, single instance — rooms do
 not survive restarts). Details: `docs/MULTIPLAYER.md`.
 

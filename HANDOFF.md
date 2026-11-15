@@ -6,6 +6,11 @@ steps” sections describe the original handoff snapshot. The expanded catalog a
 additional deterministic events are specified in [the v0.2 proposal](docs/ENGINE_V0_2_PROPOSAL.md)
 and await engine implementation. The v0.1 backend and its game rules were unchanged.
 
+**Update 2026-11-15 (mission hub, uncommitted):** the entry page is now a hub for three
+experiences: the Orbiter (solo and crew), the Lunar Rover (`rover/`, from Amanar) and the
+Training Academy (`academy/`, from AmanarII). Mission Control choices are compact cards with
+a collapsed “Show details” disclosure. See `docs/EXPERIENCES.md`.
+
 **Update 2026-11-15 (unified console pass, uncommitted):** the app compiles and all 34
 tests pass. Six builder steps (Structure, Science, Power, Propulsion, Comms, Protection;
 Solar and Battery merged into Power). The review is now its own screen
