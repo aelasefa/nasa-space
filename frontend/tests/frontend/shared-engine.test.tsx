@@ -9,8 +9,10 @@ afterEach(cleanup)
 
 it('runs the judge demo with the real shared domain engine', () => {
   const game = createGame(engine)
-  render(<App game={game}/>)
+  const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
   const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
+  render(<App game={game}/>)
+  flySolo()
   click('Take the console')
   fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
   click('Set Malapert Massif as target')

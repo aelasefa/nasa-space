@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from 'react'
 
 /*
  * Shared screen furniture. Every phase uses the same header, telemetry readout, radio
- * card and action bar, so the game reads as one console from briefing to debrief.
+ * card and action bar, so the game reads as one console from briefing to multiverse.
  */
 
 export function ScreenHeader({ eyebrow, title, lede, aside, headingRef }: {

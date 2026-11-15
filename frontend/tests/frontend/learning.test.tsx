@@ -7,11 +7,13 @@ import { createGame } from '../../src/app/controller'
 import { engine } from '../../src/app/engine'
 
 afterEach(cleanup)
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }))
 
 function reachBuilder() {
   const game = createGame(engine)
   render(<App game={game}/>)
+  flySolo()
   click('Take the console')
   fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Set Malapert Massif as target' }))

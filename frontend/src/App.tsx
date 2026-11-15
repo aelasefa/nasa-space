@@ -10,23 +10,26 @@ import { RadioProvider, VoiceToggle } from './components/Radio'
 import { Flight } from './features/Flight'
 import { Debrief } from './features/Debrief'
 import { TargetSelect } from './features/TargetSelect'
+import { Multiverse } from './features/Multiverse'
 import { Guide } from './components/Guide'
 import { motionOK } from './space/motion'
 import { SpaceBackdrop } from './space/SpaceBackdrop'
+import { MultiplayerSession } from './features/multiplayer/Session'
+import { codeFromLocation, loadMpSession } from './app/multiplayer/session'
 
 const phases = {
   briefing: 'Briefing', target: 'Target', builder: 'Build', reviews: 'Review',
-  flight: 'Mission control', debrief: 'Debrief',
+  flight: 'Mission control', debrief: 'Debrief', multiverse: 'Multiverse',
 }
 const phaseOrder = Object.keys(phases)
-/** Multiverse is folded into debrief; keep old saves, but show one final progress step. */
-const progressPhase = (phase: string) => phase === 'multiverse' ? 'debrief' : phase
 
 export function App({ game }: { game: Game }) {
   const { save, recovery, message, playback } = useStore(game.store)
   const [confirmReset, setConfirmReset] = useState(false)
   // The call sign lives in memory only; it is never written to the save.
   const [callSign, setCallSign] = useState('')
+  const [mode, setMode] = useState<'choose' | 'solo' | 'multi'>(() =>
+    (loadMpSession() || codeFromLocation()) ? 'multi' : 'choose')
   const [guide, setGuide] = useState(false)
   // Builder position and trade-study reason survive trips to the review and back (session only).
   const [builderStep, setBuilderStep] = useState(0)
@@ -81,17 +84,24 @@ export function App({ game }: { game: Game }) {
     return () => ctx.revert()
   }, [intro])
   const backdrop = <SpaceBackdrop mode={intro ? 'intro' : phase === 'target' ? 'target' : 'app'}/>
+  if (mode === 'multi') return <MultiplayerSession onSolo={() => setMode('solo')}/>
   if (intro) return <>{backdrop}<main className="intro" ref={content} tabIndex={-1}>
-    <Briefing start={name => { setCallSign(name); game.start() }}/>
+    {mode === 'choose' ? <section className="panel mp-home" style={{ margin: '0 auto' }}>
+      <p className="intro-transmission"><span className="builder-signal" aria-hidden="true"/>Mission 01 · Incoming assignment</p>
+      <h1>How do you want to fly?</h1>
+      <p className="lede">Solo keeps your local draft. Create or join a guest mission to share one orbiter with a crew of 2–4.</p>
+      <div className="actions">
+        <button type="button" className="primary" onClick={() => setMode('solo')}>Fly solo</button>
+        <button type="button" onClick={() => setMode('multi')}>Create or join mission</button>
+      </div>
+    </section> : <Briefing start={name => { setCallSign(name); game.start() }}/>}
   </main></>
   return <RadioProvider>{backdrop}<div className="shell" ref={shell}>
     <header className="topbar">
       <div className="wordmark"><span aria-hidden>◒</span> LUNA–01</div>
-      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) => {
-        const current = progressPhase(phase)
-        return <li key={key} aria-current={current === key ? 'step' : undefined}
-          data-done={index < phaseOrder.indexOf(current) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>
-      })}</ol>
+      <ol className="progress" aria-label="Mission progress">{Object.entries(phases).map(([key, name], index) =>
+        <li key={key} aria-current={phase === key ? 'step' : undefined}
+          data-done={index < phaseOrder.indexOf(phase) || undefined}>{name}<span className="progress-count"> · {index + 1} of {phaseOrder.length}</span></li>)}</ol>
       <div className="topbar-actions">
         <button className="quiet" onClick={() => setGuide(true)} aria-haspopup="dialog">How to play</button>
         <details className="nav-settings" ref={settings}>
@@ -119,9 +129,9 @@ export function App({ game }: { game: Game }) {
         {save.phase === 'builder' && <Builder game={game} save={save} step={builderStep} onStep={setBuilderStep}/>}
         {save.phase === 'reviews' && <Review game={game} save={save} openStep={openStep} rationale={rationale} onRationale={setRationale}/>}
         {phase === 'flight' && <Flight game={game} save={save} callSign={callSign} universe={playback ? root : undefined}/>}
-        {(save.phase === 'debrief' || save.phase === 'multiverse') && !playback && root && save.collection &&
-          <Debrief game={game} universe={root} collection={save.collection} targetId={save.targetId} callSign={callSign}
-            explore={save.phase === 'multiverse'}/>}
+        {save.phase === 'debrief' && !playback && root && save.collection &&
+          <Debrief game={game} universe={root} collection={save.collection} targetId={save.targetId} callSign={callSign}/>}
+        {save.phase === 'multiverse' && save.collection && <Multiverse game={game} collection={save.collection}/>}
       </>}
     </main>
     <footer>Educational model · Mission numbers and trajectories are illustrative. CML gates are game-level proxies.</footer>

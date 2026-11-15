@@ -161,3 +161,12 @@ git clean -fd frontend/src/craft frontend/src/missions frontend/src/components/R
 - Target regions: `docs/TARGET_REGIONS.md`. Target choice has no simulation effect.
 - No `backdrop-filter` over WebGL canvases (it cost the builder ~118 fps once).
 - Commit on request only; the user has been committing straight to `main`.
+
+## Multiplayer (WIP note — 2026-11-15)
+
+Backend room registry + WebSocket `/mp` + 10 node:test cases green.
+Frontend: create/join/lobby, shared phases via bridge, voting panel, guest session
+reconnect key `luna01:mp:session:v1`. Solo preserved behind "Fly solo".
+CI workflow added. Docker build uses `npm run build` (includes multiplayer).
+Browser E2E with two contexts not yet automated — verify manually with two tabs.
+Multiverse after shared debrief remains local-only.

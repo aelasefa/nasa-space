@@ -13,6 +13,7 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }))
 const heading = () => document.querySelector('.assembly-card h2')!.textContent
 const stepTitle = (label: string) => luna01.steps.find(step => step.label === label)!.title
@@ -20,6 +21,7 @@ const stepTitle = (label: string) => luna01.steps.find(step => step.label === la
 function reachBuilder() {
   const game = createGame(engine)
   render(<App game={game}/>)
+  flySolo()
   click('Take the console')
   click('Start with Malapert Massif')
   click('Set Malapert Massif as target')

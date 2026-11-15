@@ -14,3 +14,17 @@ in Docker (`docker-compose.yml`) and serves it on port 3000.
 
 Product and engineering specs live at the root: `PRODUCT.md`, `ARCHITECTURE.md`,
 `DOMAIN_CONTRACTS.md`, `GAME_RULES.md`, `TASKS.md`, `DEMO_SCRIPT.md`.
+
+
+## Multiplayer (guest co-op)
+
+No accounts. Create or join a mission from the intro screen. The backend serves
+WebSocket rooms at `ws://localhost:3000/mp` (in-memory, single instance — rooms do
+not survive restarts). Details: `docs/MULTIPLAYER.md`.
+
+```bash
+# terminal 1
+cd backend && npm start
+# terminal 2
+cd frontend && npm run dev
+```

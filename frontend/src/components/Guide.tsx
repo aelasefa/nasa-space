@@ -6,7 +6,7 @@ const steps = [
   ['Build', 'Pick one option for each part. Keep the total within budget and mass, and choose the ice-sensitive spectrometer: finding water ice is the goal.'],
   ['Review', 'Compare your design with the starter, record why you chose it, accept the remaining warnings, then authorize launch.'],
   ['Fly', 'Make two calls in flight: how to use the battery in the Moon’s shadow, and what to send home first.'],
-  ['Debrief', 'Read what Earth learned, then replay one decision in the Multiverse explorer on the same screen.'],
+  ['Learn', 'Read the debrief to see what shaped the result, then replay the mission with one decision changed.'],
 ] as const
 
 /** "How to play" plus the full glossary, opened from the top bar. */

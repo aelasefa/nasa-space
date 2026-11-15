@@ -58,3 +58,7 @@ Choose ice spectrometer + robust power + high propulsion + high comms + direct t
 
 ## Release acceptance
 A new user can complete the loop; all branches reuse the exact same simulation; invalid configurations cannot launch; CML approvals invalidate on config change; the demo works on a static deployment and without internet after initial load.
+
+## Multiplayer
+
+Optional guest co-op (2–4 players, no accounts). Solo play is unchanged. See `docs/MULTIPLAYER.md`.

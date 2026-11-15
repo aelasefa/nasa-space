@@ -7,8 +7,10 @@ import { saveKey } from '../../src/app/save'
 import { fixture } from './engine.fixture'
 
 afterEach(() => { cleanup(); localStorage.clear() })
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }))
 const enterBriefing = () => {
+  flySolo()
   click('Take the console')
   fireEvent.click(screen.getByRole('button', { name: /^Malapert Massif/ }))
   click('Set Malapert Massif as target')

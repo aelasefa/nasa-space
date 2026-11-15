@@ -648,7 +648,7 @@ html { scroll-padding-top: 92px; }
   .action-bar-buttons > button { flex: 1 1 0; }
 }
 
-/* Top-bar mission progress: completed phases and, on phones, "n of 6" */
+/* Top-bar mission progress: completed phases and, on phones, "n of 7" */
 .progress li[data-done] { color: #c5d3da; }
 .progress li[data-done]::before { content: "✓"; color: var(--accent); }
 .progress-count { display: none; }
@@ -764,6 +764,15 @@ html { scroll-padding-top: 92px; }
 .learn-list .basis { margin-top: .15rem; }
 
 
-/* Debrief ends the mission; the explorer lives on the same screen. */
-.debrief .multiverse { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
-.debrief .multiverse .screen-head { margin-bottom: 1rem; }
+/* Multiplayer lobby */
+.crew-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.crew-list li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto auto; gap: .35rem .75rem; align-items: center; padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: #0b142099; }
+.crew-list span { color: var(--muted); font-size: .85rem; }
+.lobby .control input { width: 100%; margin-top: .35rem; }
+.mp-home { display: grid; gap: 1rem; max-width: 40rem; }
+.mp-home .option-group { margin-top: 0; }
+
+.crew-strip { display: grid; gap: .65rem; margin-bottom: 1rem; }
+.crew-strip .crew-list { margin: 0; }
+.mp-home .actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.mp-home h1 { margin: .35rem 0 .5rem; font-size: clamp(1.6rem, 4vw, 2.2rem); }

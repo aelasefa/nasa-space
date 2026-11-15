@@ -5,7 +5,7 @@
   "description": "LUNA-01 simulation and multiverse engine with its HTTP API",
   "scripts": {
     "build": "tsc -p tsconfig.domain.json && node -e \"require('node:fs').writeFileSync('dist-domain/package.json', JSON.stringify({type: 'commonjs'}))\"",
-    "test": "npm run build && node --test dist-domain/tests/domain/*.test.js",
+    "test": "npm run build && node --test dist-domain/tests/domain/*.test.js dist-domain/tests/multiplayer/*.test.js",
     "start": "npm run build && node dist-domain/src/server.js"
   },
   "devDependencies": {

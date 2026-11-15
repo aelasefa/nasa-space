@@ -8,6 +8,7 @@ import { saveKey } from '../../src/app/save'
 import { fixture } from './engine.fixture'
 
 afterEach(() => { cleanup(); localStorage.clear() })
+const flySolo = () => fireEvent.click(screen.getByRole('button', { name: 'Fly solo' }))
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }))
 
 it('lists exactly NASA’s 13 August 2022 regions, in NASA’s order', () => {
@@ -42,6 +43,7 @@ it('backs every placed position with an LROC product and keeps it inside its pub
 it('lets the player pick a target from the list, see its sourced facts and carry it into the mission', () => {
   const game = createGame(fixture, localStorage)
   render(<App game={game}/>)
+  flySolo()
   click('Take the console')
   expect(screen.getByRole('heading', { name: 'Where should LUNA‑01 look?' })).toBeTruthy()
   expect(screen.getByText(/Historical dataset\./).closest('p')!.textContent).toMatch(/narrowed its list to nine/)

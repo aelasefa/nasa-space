@@ -34,8 +34,10 @@ function PowerReadings({ preview }: { preview: PowerPreview }) {
   </div>
 }
 
-export function Builder({ game, save, mission = luna01, step: index, onStep }: {
+export function Builder({ game, save, mission = luna01, step: index, onStep, canEdit }: {
   game: Game; save: Save; mission?: MissionDefinition; step: number; onStep: (step: number) => void
+  /** When set (multiplayer), only owned fields are editable. */
+  canEdit?: (field: ConfigField) => boolean
 }) {
   const { config, alternative } = save
   const { engine } = game
@@ -79,7 +81,9 @@ export function Builder({ game, save, mission = luna01, step: index, onStep }: {
         const blocks = issues.some(item => item.severity === 'blocker')
         const preview = step.preview === 'shadow-energy' && engine && field === 'powerId' ? powerPreview(engine, config, id as PowerId) : null
         const specs = mission.specs(field, id).filter(spec => !preview || spec.label === 'Cost' || spec.label === 'Mass')
-        return <OptionCard key={id} name={field} id={id} title={name} checked={config[field] === id} onChange={() => game.select(field, id)}
+        return <OptionCard key={id} name={field} id={id} title={name} checked={config[field] === id}
+          disabled={canEdit ? !canEdit(field) : false}
+          onChange={() => game.select(field, id)}
           tone={blocks ? 'bad' : issues.length ? 'warn' : undefined}
           tag={<>{config[field] === id && <span className="tag">Installed</span>}
             {issues.length > 0 && <span className="tag" data-tone={blocks ? 'bad' : 'warn'}>{blocks ? 'Blocks launch' : 'Warning'}</span>}</>}>
@@ -130,7 +134,10 @@ export function Builder({ game, save, mission = luna01, step: index, onStep }: {
         {step.fixedNote && <p className="notice">{step.fixedNote}</p>}
         {step.notModeled && <p className="fine">Not simulated: {step.notModeled.join(' · ')}</p>}
         {step.preview === 'shadow-energy' && engine && <p className="fine">Shadow figures assume a full observation with your current instrument ({label('payloadId', config.payloadId)}).</p>}
-        {step.fields.map(choices)}
+        {step.fields.map(field => {
+          const locked = canEdit && !canEdit(field)
+          return <div key={field}>{locked && <p className="fine">Owned by another role — empty seats fall back so a crew of two still covers every subsystem.</p>}{choices(field)}</div>
+        })}
         {radio && step.radio && <Transmission from={radio}>{step.radio.text}</Transmission>}
         <details key={step.id} className="learn">
           <summary>Learn why this step matters</summary>
