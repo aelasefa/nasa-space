@@ -33,6 +33,7 @@ export interface BuildStep {
   fields: ConfigField[]
   /** Shown when the subsystem is fixed in this mission's model. */
   fixedNote?: string
+  /** Show each option's shadow-pass energy picture (solar output, storage, endurance) from the engine. */
   preview?: 'shadow-energy'
   /** Which part of the spacecraft to highlight. */
   focus: string
@@ -60,4 +61,10 @@ export interface MissionDefinition<Design extends Record<string, string> = Recor
   /** Maps the engine configuration to stylized spacecraft parts (slot → variant). */
   design: (config: SpacecraftConfig) => Design
   crew: Record<string, Character>
+  /** Plain-language wording for engine finding IDs. Unlisted findings fall back to the engine message. */
+  findingText: Partial<Record<string, string>>
 }
+
+/** Index of the build step where a config field is chosen, or -1 when no step offers it. */
+export const stepIndexFor = (mission: MissionDefinition, field: string) =>
+  mission.steps.findIndex(step => step.fields.some(item => item === field))

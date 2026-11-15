@@ -4,6 +4,8 @@ import type { MutableField, ResourceReport, Universe, UniverseCollection, Univer
 import { decisionFields, fields, label, options } from '../app/options'
 import { Causes, delta, eventNames, metrics, number, outcomes } from '../components/MissionData'
 import { metricLabels, plain, points, recommend, statusLabel } from '../app/story'
+import { explainReplay } from '../app/replay'
+import { ScreenHeader } from '../components/Screen'
 
 function Inputs({ universe }: { universe: Universe }) {
   const change = universe.change
@@ -22,7 +24,8 @@ function Tree({ universes, id, selected, onSelect }: {
     <Tree key={child.id} universes={universes} id={child.id} selected={selected} onSelect={onSelect}/>)}</ul>}</li>
 }
 
-function Comparison({ a, b, result }: { a: Universe; b: Universe; result: UniverseComparison }) {
+export function Comparison({ a, b, result, explain = true }: { a: Universe; b: Universe; result: UniverseComparison; explain?: boolean }) {
+  const reading = explain && b.parentId === a.id ? explainReplay(a, b) : null
   const rows = (Object.keys(metrics) as (keyof ResourceReport)[]).map(key => ({
     name: metrics[key][0], unit: metrics[key][1], a: a.result.resources[key], b: b.result.resources[key], delta: result.resourceDeltas[key],
   }))
@@ -37,6 +40,7 @@ function Comparison({ a, b, result }: { a: Universe; b: Universe; result: Univer
     {result.changedFields.map(change => <p className="change" key={change.field}><strong>{fields[change.field]}</strong> · {label(change.field, change.from)} → {label(change.field, change.to)}</p>)}
     {result.changedFields.length === 0 && <p>Both universes have identical mission inputs.</p>}
     <Summary a={a} b={b} result={result}/>
+    {reading && <div className="replay-why"><p><strong>Why:</strong> {reading.why}</p><p><strong>Remaining bottleneck:</strong> {reading.bottleneck}</p></div>}
     <div className="table-wrap"><table><thead><tr><th scope="col">Mission measure</th><th scope="col">Universe {a.id}</th><th scope="col">Universe {b.id}</th><th scope="col">Δ</th></tr></thead>
       <tbody>{rows.map(row => <tr key={row.name}><th scope="row">{row.name} ({row.unit})</th>
         <td>{number(row.a)}</td><td>{number(row.b)}</td><td className={row.delta ? 'changed' : ''}>{delta(row.delta)}</td></tr>)}</tbody></table></div>
@@ -90,8 +94,10 @@ export function Multiverse({ game, collection }: { game: Game; collection: Unive
   const rec = recommend(parent)
   const existing = rec && universes.find(item => item.parentId === parentId && item.change?.field === rec.field && item.change.to === rec.to)
 
-  return <section><div className="spread"><h1>Multiverse explorer</h1><button onClick={game.debrief}>Original debrief</button></div>
-    <p className="lede">Change one decision, rerun the same flight with the same model, and see what that single choice did.</p>
+  return <section className="multiverse">
+    <ScreenHeader eyebrow="LUNA‑01 · Multiverse" title="Multiverse explorer"
+      lede="Change one decision, rerun the same flight with the same model, and see what that single choice did."
+      aside={<button type="button" onClick={game.debrief}>Back to debrief</button>}/>
     <div className="multiverse-grid">
       <aside><div className="panel"><div className="spread"><h2>Universe tree</h2><span className="tag">{universes.length} / 8</span></div>
         <ul className="tree"><Tree universes={universes} id={rootId} selected={parentId} onSelect={id => {
